@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="DESCRIPTION META TAG">
+  <meta property="og:title" content="SOCIAL MEDIA TITLE TAG"/>
+  <meta property="og:description" content="SOCIAL MEDIA DESCRIPTION TAG TAG"/>
+  <meta property="og:url" content="URL OF THE WEBSITE"/>
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
+  <meta property="og:image" content="static/image/your_banner_image.png" />
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+
+  <meta name="twitter:title" content="TWITTER BANNER TITLE META TAG">
+  <meta name="twitter:description" content="TWITTER BANNER DESCRIPTION META TAG">
+  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
+  <meta name="twitter:image" content="static/images/your_twitter_banner_image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Keywords for your paper to be indexed by-->
+  <meta name="keywords" content="Human pose, Human Pose forecasting">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <title>Multi-agent Long-term 3D Human Pose Forecasting via Interaction-aware Trajectory Conditioning</title>
+  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script src="static/js/bulma-carousel.min.js"></script>
+  <script src="static/js/bulma-slider.min.js"></script>
+  <script src="static/js/index.js"></script>
+
+  <style>
+    /* General styles */
+    body {
+      font-family: 'Noto Sans', sans-serif; /* Default font */
+      line-height: 1.6; /* Improved readability */
+      background-color: #ffffff; /* Default background color */
+      color: #333333; /* Default text color */
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Title styles */
+    .title.is-1.publication-title {
+      font-size: 32px; /* Default font size */
+      font-weight: bold; /* Bold font weight */
+      margin-bottom: 10px; /* Bottom margin */
+      text-align: center; /* Center align */
+      padding: 20px 0; /* Padding top and bottom */
+    }
+
+    /* Abstract section */
+    .abstract-section {
+      background-color: #f0f0f0; /* Lighter background color */
+      padding: 40px 20px; /* Padding */
+    }
+
+    /* Methodology section */
+    .methodology-section {
+      background-color: #ffffff; /* White background color */
+      padding: 40px 20px; /* Padding */
+    }
+
+    /* Container styles */
+    .container {
+      max-width: 1200px; /* Max width for content */
+      margin: 0 auto; /* Center align content */
+    }
+
+    /* Responsive styles */
+    @media screen and (max-width: 767px) {
+      .title.is-1.publication-title {
+        font-size: 23px; /* Adjusted font size for mobile */
+      }
+    }
+
+    .methodology-image {
+      width: 85%;
+      height: auto;
+      min-width: 300px; /* Set a minimum width for the image */
+    }
+
+    .dataset-image {
+      width: auto;
+      height: 150px;
+    }
+    .dataset-pose {
+      width: auto;
+      height: 400px;
+    }
+  
+    @media (max-width: 768px) {
+      .methodology-image {
+        width: 85%; /* Maintain width on mobile */
+      }
+  
+      .methodology-list {
+        max-width: 85%; /* Ensure the list aligns with the image width */
+        margin: 0 auto; /* Center the list */
+      }
+
+      .dataset-image {
+        width: auto;
+        height: 100%;
+      }
+      .dataset-pose {
+        width: auto;
+        height: 100%;
+      }
+    }
+  
+    .methodology-section .container {
+      text-align: center;
+    }
+
+    .results-section .container {
+      text-align: center;
+    }
+  
+    .methodology-list {
+      text-align: left; /* Align list text to the left */
+      margin: 0 auto; /* Center the list */
+      padding-left: 1.5em; /* Add padding to align with list style */
+    }
+
+    .image-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px; /* Adjust the gap between images */
+      margin-bottom: 10px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">Multi-agent Long-term 3D Human Pose Forecasting via <br> Interaction-aware Trajectory Conditioning</h1>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="https://jaewoo97.github.io" target="_blank">Jaewoo Jeong</a><sup>*</sup>,</span>
+              <span class="author-block">
+                <a href="https://scholar.google.com/citations?user=dGMozakAAAAJ&hl=en&oi=ao" target="_blank">Daehee Park</a><sup>*</sup>,</span>
+              <span class="author-block">
+                <a href="https://sites.google.com/site/kjyoon/" target="_blank">Kuk-Jin Yoon</a>
+              </span>
+              </div>
+
+              <div class="is-size-5 publication-authors">
+                <span class="author-block">KAIST<br>CVPR 2024 Highlight</span>
+                <span class="eql-cntrb"><small><br><sup>*</sup>Indicates Equal Contribution</small></span>
+              </div>
+
+              <div class="column has-text-centered">
+                <div class="publication-links">
+                  <span class="link-block">
+                    <a href="https://arxiv.org/abs/2404.05218" target="_blank" 
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                    </span>
+                    <span>Paper</span>
+                  </a>
+                </span>
+
+                <span class="link-block">
+                  <a href="https://github.com/jaewoo97/t2p" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                    <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                </a>
+                <!-- Supplementary PDF link -->
+                <span class="link-block">
+                  <a href="https://openaccess.thecvf.com/content/CVPR2024/html/Jeong_Multi-agent_Long-term_3D_Human_Pose_Forecasting_via_Interaction-aware_Trajectory_Conditioning_CVPR_2024_paper.html" target="_blank"
+                  class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                    <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Supplementary</span>
+                </a>
+              </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <section class="hero teaser">
+    <div class="container is-max-desktop">
+      <div class="hero-body" style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; text-align: center;">
+        <div style="flex: 1; margin: 10px; max-width: 52%;">
+          <img src="static/images/figure_1.png" alt="MY ALT TEXT" style="width: 100%; height: auto;"/>
+        </div>
+        <div style="flex: 1; margin: 10px; max-width: 37%;">
+          <!-- <video poster="" id="tree" autoplay controls muted loop height="100%">
+            <source src="static/videos/_main_.mp4"
+            type="video/mp4">
+          </video> -->
+          <img src="static/images/final_t2p_main.gif" alt="MY ALT TEXT" style="width: 100%; height: auto;"/>
+        </div>
+      </div>
+      <h2 class="subtitle has-text-centered">
+        <strong>T</strong>rajectory<strong>2P</strong>ose: a coarse-to-fine approach for <strong>human pose forecasting in complex scenes</strong>. <br>Our method first forecasts global trajectories (<strong>coarse</strong>), upon which local poses (<strong>fine</strong>) are conditionally predicted.<br>
+      </h2>
+    </div>
+  </section>
+
+  <section class="hero is-small methodology-section">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">Methodology</h2>
+        <img class="methodology-image" src="static/images/figure_2.PNG" alt="MY ALT TEXT"/>
+        <ul class="methodology-list">
+          <li>- Coarse global trajectories are forecasted from past motion (trajectory + pose)</li>
+          <li>- Fine local motion forecasted with conditioning on predicted future trajectory</li>
+          <li>- Complementary forecasting of <strong>Global</strong> and <strong>Local</strong> motion yields comprehensive proficiency.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="hero is-small results-section">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">Comparison of results</h2>
+        <p class="methodology-list">
+          Comparison of prediction results on <a href="http://mocap.cs.cmu.edu" target="_blank">CMU-Mocap</a>  <a href="https://www.projects.science.uu.nl/umpm/" target="_blank">(UMPM)</a> dataset. We compare results with <a href="https://arxiv.org/pdf/2111.12073" target="_blank">MRT</a>, <a href="https://arxiv.org/abs/2308.04808" target="_blank">JRT</a>, and <a href="https://arxiv.org/abs/2303.05095" target="_blank">TBIFormer</a>.
+        </p>
+        <style>
+          .qual-size {
+            width: 300px;
+            height: auto;
+          }
+        </style>
+        <div class="columns is-multiline is-mobile">
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/t2p_batch_1_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+          </div>
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/MRT_batch_1_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+          </div>
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/JRT_batch_1_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+          </div>
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/TBI_batch_1_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+          </div>
+        <!-- second line -->
+        <div class="columns is-multiline is-mobile">
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/t2p_batch_7_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+            <h3 class="title is-5">T2P (Ours)</h3>
+            <!-- <h3 class="title is-5">T2P (Ours)</h3> -->
+          </div>
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/MRT_batch_7_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+            <h3 class="title is-5">MRT / 2021 NeurIPS</h3>
+            <!-- <h3 class="title is-5">MRT / 2021 NeurIPS</h3> -->
+          </div>
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/JRT_batch_7_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+            <h3 class="title is-5">JRT / 2023 ICCV</h3>
+            <!-- <h3 class="title is-5">JRT / 2023 ICCV</h3> -->
+          </div>
+          <div class="column is-one-quarter">
+            <video poster="" id="tree" autoplay controls muted loop height="100%">
+              <!-- Your video here -->
+              <source src="static/videos/TBI_batch_7_frames_450_525-ezgif.com-gif-to-mp4-converter.mp4"
+              type="video/mp4">
+            </video>
+            <h3 class="title is-5">TBIFormer / 2023 CVPR</h3>
+            <!-- <h3 class="title is-5">TBIFormer / 2023 CVPR</h3> -->
+          </div>
+          <!-- Uncomment if you need these images -->
+          <!-- <div class="column is-one-quarter">
+            <h3 class="title is-5">Huang Lane RGB</h3>
+            <img class="methodology-image" src="static/images/OutMerged_Huang_lane_0_150_comp.gif" alt="MY ALT TEXT"/>
+          </div>
+          <div class="column is-one-quarter">
+            <h3 class="title is-5">Jordan Hall RGB 0-150</h3>
+            <img class="methodology-image" src="static/images/OutMerged_jordan_hall_0_150_comp.gif" alt="MY ALT TEXT"/>
+          </div> -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="hero is-small methodology-section">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">More results</h2>
+        <p class="methodology-list">
+          We show more results of our <strong>T2P</strong> model on CMU-Mocap (UMPM) samples.
+        </p>
+        <div class="columns is-multiline is-mobile">
+          <div class="column is-one-third">
+            <video poster="" id="tree" autoplay controls muted loop height="80%">
+              <!-- Your video here -->
+              <source src="static/videos/more_1.mp4" type="video/mp4">
+            </video>
+            <!-- <h3 class="title is-5">T2P (Ours)</h3> -->
+          </div>
+          <div class="column is-one-third">
+            <video poster="" id="tree" autoplay controls muted loop height="80%">
+              <!-- Your video here -->
+              <source src="static/videos/more_2.mp4" type="video/mp4">
+            </video>
+            <!-- <h3 class="title is-5">MRT / 2021 NeurIPS</h3> -->
+          </div>
+          <div class="column is-one-third">
+            <video poster="" id="tree" autoplay controls muted loop height="80%">
+              <!-- Your video here -->
+              <source src="static/videos/more_3.mp4" type="video/mp4">
+            </video>
+            <!-- <h3 class="title is-5">JRT / 2023 ICCV</h3> -->
+          </div>
+        <!-- <img class="methodology-image" src="static/images/OutMerged_Huang_lane_0_150_comp.gif" alt="MY ALT TEXT"/>
+        <img class="methodology-image" src="static/images/OutMerged_jordan_hall_0_150_comp.gif" alt="MY ALT TEXT"/> -->
+
+      </div>
+    </div>
+  </section>
+
+  <section class="hero is-small methodology-section">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3">JRDB-GMP dataset</h2>
+        <p class="methodology-list">
+          We parse a new dataset to train forecasting model on complex (<strong>long-term (2s+)</strong>, <strong>multi-agent (3+)</strong>), real world data. Parsed from <a href="https://jrdb.erc.monash.edu" target="_blank">JRDB dataset</a>, which is acquired from a mobile robot on campus. (RGB+LiDAR)
+        </p>
+        <video poster="" id="tree" autoplay controls muted loop width="1000px">
+          <!-- Your video here -->
+          <source src="static/videos/jordan_hall_frames_1100_1200_rgb-ezgif.com-gif-to-mp4-converter.mp4"
+          type="video/mp4">
+        </video>
+        <video poster="" id="tree" autoplay controls muted loop width="1000px">
+          <!-- Your video here -->
+          <source src="static/videos/forbes_cafe_frames_400_500_rgb-ezgif.com-gif-to-mp4-converter-2.mp4"
+          type="video/mp4">
+        </video>
+        <video poster="" id="tree" autoplay controls muted loop width="1000px">
+          <!-- Your video here -->
+          <source src="static/videos/intersection_frames_0_100_rgb-ezgif.com-gif-to-mp4-converter-2.mp4"
+          type="video/mp4">
+        </video>
+        <div class="columns is-multiline is-mobile">
+          <div class="column is-one-third">
+            <video poster="" id="tree" autoplay controls muted loop height="80%">
+              <!-- Your video here -->
+              <source src="static/videos/jordan_hall_frames_1100_1200_pose-ezgif.com-gif-to-mp4-converter.mp4" type="video/mp4">
+            </video>
+            <!-- <h3 class="title is-5">T2P (Ours)</h3> -->
+          </div>
+          <div class="column is-one-third">
+            <video poster="" id="tree" autoplay controls muted loop height="80%">
+              <!-- Your video here -->
+              <source src="static/videos/forbes_cafe_frames_400_500_pose-ezgif.com-gif-to-mp4-converter-2.mp4" type="video/mp4">
+            </video>
+            <!-- <h3 class="title is-5">MRT / 2021 NeurIPS</h3> -->
+          </div>
+          <div class="column is-one-third">
+            <video poster="" id="tree" autoplay controls muted loop height="80%">
+              <!-- Your video here -->
+              <source src="static/videos/intersection_frames_0_100_pose-ezgif.com-gif-to-mp4-converter-2.mp4" type="video/mp4">
+            </video>
+            <!-- <h3 class="title is-5">JRT / 2023 ICCV</h3> -->
+          </div>
+        <!-- <img class="methodology-image" src="static/images/OutMerged_Huang_lane_0_150_comp.gif" alt="MY ALT TEXT"/>
+        <img class="methodology-image" src="static/images/OutMerged_jordan_hall_0_150_comp.gif" alt="MY ALT TEXT"/> -->
+
+      </div>
+    </div>
+  </section>
+
+<!-- 
+  <footer class="footer">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8">
+          <div class="content">
+  
+            <p>
+              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+              You are free to borrow the of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+              Commons Attribution-ShareAlike 4.0 International License</a>.
+            </p>
+  
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer> -->
+
+<!--BibTex citation -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>
+        @inproceedings{jeong2024multi,
+          title={Multi-agent Long-term 3D Human Pose Forecasting via Interaction-aware Trajectory Conditioning},
+          author={Jeong, Jaewoo and Park, Daehee and Yoon, Kuk-Jin},
+          booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+          pages={1617--1628},
+          year={2024}
+        }
+      </code></pre>
+    </div>
+  </section>
+
+</body>
+</html>
