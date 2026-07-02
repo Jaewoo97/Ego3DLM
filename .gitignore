@@ -1,0 +1,7 @@
+# Raw paper source / submission materials — not for the public site.
+# The figures and PDFs the page uses are copied into static/.
+2439/
+
+# OS cruft
+.DS_Store
+**/.DS_Store

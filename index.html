@@ -2,22 +2,26 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="description" content="T2P">
-  <meta property="og:title" content="Trajectory2Pose"/>
-  <meta property="og:description" content="CVPR 2024"/>
-  <meta property="og:url" content="https://jaewoo97.github.io/t2p_"/>
-  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
-  <!-- <meta property="og:image" content="static/image/your_banner_image.png" />
-  <meta property="og:image:width" content="1200"/>
-  <meta property="og:image:height" content="630"/> -->
+  <meta name="description" content="Ego3DLM: Ego-Human Motion Prediction with 3D-Aware LLM. A 3D scene-aware framework that holistically forecasts and tracks 3D human pose and language in a single autoregressive pass. Accepted to ECCV 2026.">
+  <meta property="og:title" content="Ego-Human Motion Prediction with 3D-Aware LLM"/>
+  <meta property="og:description" content="ECCV 2026 — 3D scene-aware egocentric motion forecasting and tracking with a holistic pose-language LLM."/>
+  <meta property="og:url" content="https://jaewoo97.github.io/Ego3DLM/"/>
+  <meta property="og:image" content="https://jaewoo97.github.io/Ego3DLM/static/images/paper/teaser.png"/>
+  <meta property="og:image:width" content="1700"/>
+  <meta property="og:image:height" content="817"/>
+
+  <meta name="twitter:title" content="Ego-Human Motion Prediction with 3D-Aware LLM">
+  <meta name="twitter:description" content="ECCV 2026 — 3D scene-aware egocentric motion forecasting and tracking with a holistic pose-language LLM.">
+  <meta name="twitter:image" content="https://jaewoo97.github.io/Ego3DLM/static/images/paper/teaser.png">
+  <meta name="twitter:card" content="summary_large_image">
 
   <!-- Keywords for your paper to be indexed by-->
-  <meta name="keywords" content="Human pose, Human Pose forecasting">
+  <meta name="keywords" content="Egocentric Vision, Human Motion Forecasting, Human Motion Prediction, Multi-modal Large Language Models, 3D Scene, Motion Tracking, ECCV 2026, Nymeria">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-  <title>Multi-agent Long-term 3D Human Pose Forecasting via Interaction-aware Trajectory Conditioning</title>
-  <link rel="icon" href="/mnt/jaewoo4tb/homepages/t2p_/static/images/favicon.ico">
-  <link rel="apple-touch-icon" href="/mnt/jaewoo4tb/homepages/t2p_/static/images/favicon.ico">
+
+  <title>Ego3DLM: Ego-Human Motion Prediction with 3D-Aware LLM</title>
+  <link rel="icon" href="static/images/favicon.ico">
+  <link rel="apple-touch-icon" href="static/images/favicon.ico">
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
   <link rel="stylesheet" href="static/css/bulma.min.css">
   <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
@@ -29,7 +33,6 @@
 
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
   <script defer src="static/js/fontawesome.all.min.js"></script>
   <script src="static/js/bulma-carousel.min.js"></script>
   <script src="static/js/bulma-slider.min.js"></script>
@@ -38,434 +41,500 @@
   <style>
     /* General styles */
     body {
-      font-family: 'Noto Sans', sans-serif; /* Default font */
-      line-height: 1.6; /* Improved readability */
-      background-color: #ffffff; /* Default background color */
-      color: #333333; /* Default text color */
+      font-family: 'Noto Sans', sans-serif;
+      line-height: 1.6;
+      background-color: #ffffff;
+      color: #2b2b2b;
       margin: 0;
       padding: 0;
     }
 
     /* Title styles */
     .title.is-1.publication-title {
-      font-size: 32px; /* Default font size */
-      font-weight: bold; /* Bold font weight */
-      margin-bottom: 10px; /* Bottom margin */
-      text-align: center; /* Center align */
-      padding: 20px 0; /* Padding top and bottom */
+      font-size: 34px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+      padding: 20px 0 6px 0;
+      line-height: 1.25;
     }
 
-    /* Abstract section */
-    .abstract-section {
-      background-color: #f0f0f0; /* Lighter background color */
-      padding: 40px 20px; /* Padding */
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* Section backgrounds */
+    .abstract-section { background-color: #f6f7f9; }
+    .method-section { background-color: #ffffff; }
+    .data-section { background-color: #f6f7f9; }
+    .results-section { background-color: #ffffff; }
+    .qual-section { background-color: #f6f7f9; }
+
+    .section-heading {
+      text-align: center;
+      margin-bottom: 0.4rem;
+    }
+    .section-subheading {
+      text-align: center;
+      color: #666;
+      max-width: 820px;
+      margin: 0 auto 1.5rem auto;
     }
 
-    /* Methodology section */
-    .methodology-section {
-      background-color: #ffffff; /* White background color */
-      padding: 40px 20px; /* Padding */
-    }
-
-    /* Container styles */
-    .container {
-      max-width: 1200px; /* Max width for content */
-      margin: 0 auto; /* Center align content */
-    }
-
-    /* Responsive styles */
-    @media screen and (max-width: 767px) {
-      .title.is-1.publication-title {
-        font-size: 23px; /* Adjusted font size for mobile */
-      }
-      .title.is-5 {
-        font-size: 0.75rem; /* Adjust the font size as per your requirement */
-      }
-    }
-
-    .methodology-image {
-      width: 85%;
+    /* Figures */
+    figure.paper-figure { margin: 0 auto; max-width: 1080px; }
+    figure.paper-figure img {
+      width: 100%;
       height: auto;
-      min-width: 300px; /* Set a minimum width for the image */
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    figure.paper-figure figcaption {
+      font-size: 0.92rem;
+      color: #555;
+      margin-top: 0.9rem;
+      text-align: left;
     }
 
-    .dataset-image {
-      width: auto;
-      height: 150px;
-    }
-    .dataset-pose {
-      width: auto;
-      height: 400px;
-    }
-  
-    .methodology-section .container {
-      text-align: center;
+    /* Abstract text */
+    .abstract-text {
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: justify;
+      font-size: 1.05rem;
     }
 
-    .results-section .container {
-      text-align: center;
-    }
-  
-    .methodology-list {
-      text-align: left; /* Align list text to the left */
-      margin: 0 auto; /* Center the list */
-      padding-left: 1.5em; /* Add padding to align with list style */
-    }
-
-    .image-row {
+    /* Key idea / contribution cards */
+    .card-row {
       display: flex;
-      justify-content: center;
       flex-wrap: wrap;
-      gap: 10px; /* Adjust the gap between images */
-      margin-bottom: 10px;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 1.6rem;
+    }
+    .idea-card {
+      flex: 1 1 280px;
+      max-width: 360px;
+      background: #ffffff;
+      border: 1px solid #e6e8ec;
+      border-radius: 12px;
+      padding: 1.3rem 1.4rem;
+      text-align: left;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .idea-card h4 { font-weight: 700; margin-bottom: 0.45rem; color: #1f3b73; font-size: 1.05rem; }
+    .idea-card p { font-size: 0.95rem; color: #444; margin: 0; }
+
+    /* Stage cards */
+    .stage-card { flex: 1 1 260px; max-width: 340px; }
+    .stage-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #ffffff;
+      background: #5b7fbf;
+      border-radius: 999px;
+      padding: 0.18rem 0.7rem;
+      margin-bottom: 0.6rem;
     }
 
-    @media (max-width: 768px) {
-      .methodology-image {
-        width: 85%; /* Maintain width on mobile */
-      }
-  
-      .methodology-list {
-        max-width: 85%; /* Ensure the list aligns with the image width */
-        margin: 0 auto; /* Center the list */
-      }
+    /* Highlight numbers */
+    .highlight-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin: 0.5rem auto 2rem auto;
+      max-width: 1000px;
+    }
+    .highlight-card {
+      flex: 1 1 190px;
+      max-width: 230px;
+      background: #f2f6fc;
+      border: 1px solid #d9e2f2;
+      border-radius: 12px;
+      padding: 1.1rem 0.8rem;
+      text-align: center;
+    }
+    .highlight-num { font-size: 2rem; font-weight: 800; color: #2b57a5; line-height: 1.1; }
+    .highlight-label { font-size: 0.85rem; color: #555; margin-top: 0.3rem; }
 
-      .dataset-image {
-        width: auto;
-        height: 100%;
-      }
-      .dataset-pose {
-        width: auto;
-        height: 100%;
-      }
+    /* Result tables */
+    .table-caption { text-align: left; max-width: 1080px; margin: 0 auto 0.6rem auto; color: #555; font-size: 0.95rem; }
+    .table-wrap { overflow-x: auto; margin: 0 auto 2rem auto; max-width: 1080px; }
+    table.results { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    table.results th, table.results td {
+      padding: 0.42rem 0.55rem;
+      text-align: center;
+      border-bottom: 1px solid #e6e8ec;
+      white-space: nowrap;
+    }
+    table.results thead th { border-bottom: 2px solid #333; color: #222; }
+    table.results td.method, table.results th.method { text-align: left; }
+    table.results tr.ours { background: #eef3fb; font-weight: 700; color: #14315e; }
+    .group-head th { border-bottom: 1px solid #bbb; font-variant: small-caps; letter-spacing: 0.03em; }
+
+    /* Links */
+    .publication-links .link-block a { margin: 4px; }
+
+    /* Responsive */
+    @media screen and (max-width: 767px) {
+      .title.is-1.publication-title { font-size: 23px; }
+      .abstract-text { font-size: 1rem; text-align: left; }
     }
   </style>
 </head>
 <body>
 
+  <!-- ============================ TITLE / AUTHORS ============================ -->
   <section class="hero">
     <div class="hero-body">
       <div class="container is-max-desktop">
         <div class="columns is-centered">
           <div class="column has-text-centered">
-            <h1 class="title is-1 publication-title">Multi-agent Long-term 3D Human Pose Forecasting via <br> Interaction-aware Trajectory Conditioning</h1>
+            <h1 class="title is-1 publication-title">Ego-Human Motion Prediction with 3D-Aware LLM</h1>
+
             <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="https://orcid.org/0009-0002-9225-8588" target="_blank">Yujin Bae</a><sup>*</sup>,</span>
               <span class="author-block">
                 <a href="https://jaewoo97.github.io" target="_blank">Jaewoo Jeong</a><sup>*</sup>,</span>
               <span class="author-block">
-                <a href="https://scholar.google.com/citations?user=dGMozakAAAAJ&hl=en&oi=ao" target="_blank">Daehee Park</a><sup>*</sup>,</span>
+                <a href="https://orcid.org/0009-0003-9792-4647" target="_blank">Hyeonseong Kim</a><sup>*</sup>,</span>
               <span class="author-block">
-                <a href="https://sites.google.com/site/kjyoon/" target="_blank">Kuk-Jin Yoon</a>
-              </span>
-              </div>
+                <a href="https://sites.google.com/site/kjyoon/" target="_blank">Kuk-Jin Yoon</a></span>
+            </div>
 
-              <div class="is-size-5 publication-authors">
-                <span class="author-block"><a href="https://vi.kaist.ac.kr/" style="color: #FA8072;" target="_blank">Visual Intelligence Lab</a>, KAIST<br>CVPR 2024 Highlight</span>
-                <span class="eql-cntrb"><small><br><sup>*</sup>Indicates Equal Contribution</small></span>
-              </div>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><a href="https://vi.kaist.ac.kr/" style="color: #FA8072;" target="_blank">Visual Intelligence Lab</a>, KAIST</span>
+              <br>
+              <span class="publication-venue">ECCV 2026</span>
+              <span class="eql-cntrb"><small><br><sup>*</sup>Indicates Equal Contribution</small></span>
+            </div>
 
-              <div class="column has-text-centered">
-                <div class="publication-links">
-                  <span class="link-block">
-                    <a href="https://arxiv.org/abs/2404.05218" target="_blank" 
-                    class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fas fa-file-pdf"></i>
-                    </span>
+            <div class="column has-text-centered">
+              <div class="publication-links">
+                <!-- Paper PDF link -->
+                <span class="link-block">
+                  <a href="static/pdfs/Ego3DLM_paper.pdf" target="_blank"
+                  class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fas fa-file-pdf"></i></span>
                     <span>Paper</span>
                   </a>
                 </span>
 
-                <span class="link-block">
-                  <a href="https://github.com/jaewoo97/t2p" target="_blank" class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon">
-                    <i class="fab fa-github"></i>
-                  </span>
-                  <span>Code</span>
-                </a>
                 <!-- Supplementary PDF link -->
                 <span class="link-block">
-                  <a href="https://openaccess.thecvf.com/content/CVPR2024/html/Jeong_Multi-agent_Long-term_3D_Human_Pose_Forecasting_via_Interaction-aware_Trajectory_Conditioning_CVPR_2024_paper.html" target="_blank"
+                  <a href="static/pdfs/Ego3DLM_supplementary.pdf" target="_blank"
                   class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon">
-                    <i class="fas fa-file-pdf"></i>
-                  </span>
-                  <span>Supplementary</span>
-                </a>
-              </span>
-              </span>
+                    <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                    <span>Supplementary</span>
+                  </a>
+                </span>
+
+                <!-- TODO: add arXiv URL, then un-comment this button.
+                <span class="link-block">
+                  <a href="ARXIV_URL_HERE" target="_blank"
+                  class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="ai ai-arxiv"></i></span>
+                    <span>arXiv</span>
+                  </a>
+                </span>
+                -->
+
+                <!-- TODO: add GitHub repo URL, then un-comment this button.
+                <span class="link-block">
+                  <a href="GITHUB_URL_HERE" target="_blank"
+                  class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon"><i class="fab fa-github"></i></span>
+                    <span>Code</span>
+                  </a>
+                </span>
+                -->
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
+  <!-- ============================ TEASER ============================ -->
   <section class="hero teaser">
     <div class="container is-max-desktop">
-      <div class="hero-body" style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; text-align: center;">
-        <div style="flex: 1; margin: 10px; max-width: 52%;">
-          <img src="static/images/figure_1.png" alt="MY ALT TEXT" style="width: 100%; height: auto;"/>
-        </div>
-        <div style="flex: 1; margin: 10px; max-width: 37%;">
-          <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline height="100%">
-            <source src="static/videos/t2p_main_vid.mp4"
-            type="video/mp4">
-          </video>
-          <!-- <img src="static/images/final_t2p_main.gif" alt="MY ALT TEXT" style="width: 100%; height: auto;" loop="infinite"/> -->
-        </div>
+      <div class="hero-body">
+        <figure class="paper-figure">
+          <img src="static/images/paper/teaser.png" alt="Ego3DLM teaser: given a prompt, three-point tracking, a 3D scene, and 2D egocentric video, a single language model jointly outputs past/future 3D pose and their language descriptions."/>
+        </figure>
+        <h2 class="subtitle has-text-centered" style="margin-top: 1.2rem;">
+          <strong>Ego3DLM</strong> incorporates the semantic context of the surrounding <strong>3D environment</strong> together with 2D egocentric video and three-point tracking to jointly generate <strong>past and future 3D poses</strong> and their corresponding <strong>language motion descriptions</strong> &mdash; all in a single autoregressive pass.
+        </h2>
       </div>
-      <h2 class="subtitle has-text-centered">
-        <strong>T</strong>rajectory<strong>2P</strong>ose: a coarse-to-fine approach for <strong>human pose forecasting in complex scenes</strong>. <br>Our method first forecasts global trajectories (<strong>coarse</strong>), upon which local poses (<strong>fine</strong>) are conditionally predicted.<br>
-      </h2>
     </div>
   </section>
 
-  <section class="hero is-small methodology-section">
+  <!-- ============================ ABSTRACT ============================ -->
+  <section class="hero is-small abstract-section">
     <div class="hero-body">
       <div class="container">
-        <h2 class="title is-3">Methodology</h2>
-        <img class="methodology-image" src="static/images/figure_2.PNG" alt="MY ALT TEXT"/>
-        <ul class="methodology-list">
-          <li>- Coarse global trajectories are forecasted from past motion (trajectory + pose)</li>
-          <li>- Fine local motion forecasted with conditioning on predicted future trajectory</li>
-          <li>- Complementary forecasting of <strong>Global</strong> and <strong>Local</strong> motion yields comprehensive proficiency.</li>
-        </ul>
+        <h2 class="title is-3 section-heading">Abstract</h2>
+        <div class="abstract-text">
+          <p>
+            Anticipating human motion from an egocentric perspective is fundamental for proactive assistance in AR/VR, human&ndash;robot collaboration, and embodied AI. While recent works incorporate language as a semantic prior to reduce the ill-posed nature of egocentric forecasting, they largely neglect the 3D spatial and semantic context that governs how motion unfolds, and treat pose and language prediction as separate inference streams.
+          </p>
+          <p style="margin-top: 1rem;">
+            We introduce <strong>Ego3DLM</strong>, built on two core principles: accurate motion forecasting requires explicit <strong>spatial and semantic understanding of the 3D environment</strong>, and pose and language must be predicted <strong>holistically in a single pass</strong>, since motion is inherently tied to the semantic interpretation of actions being performed. Given three-point tracking, 3D scene features, and egocentric video, Ego3DLM simultaneously decodes past pose, future pose, past narration, and future narration in a single autoregressive pass, grounding predicted poses and descriptions in one another to enforce cross-modal and temporal consistency.
+          </p>
+          <p style="margin-top: 1rem;">
+            We adopt a three-stage training scheme: (1) spatial-semantic scene awareness pretraining; (2) holistic instruction tuning over all four outputs in a single pass; and (3) GRPO-based reinforcement finetuning with intra- and inter-modal rewards that directly optimize pose-language fidelity. Experiments on the <strong>Nymeria</strong> benchmark demonstrate that Ego3DLM achieves state-of-the-art performance across future motion prediction, past motion tracking, and motion description, showing that 3D scene grounding and holistic cross-modal prediction yield physically plausible and semantically coherent motion forecasts.
+          </p>
+        </div>
+
+        <!-- Two core principles -->
+        <div class="card-row">
+          <div class="idea-card">
+            <h4>1. 3D scene grounding</h4>
+            <p>Accurate motion forecasting demands explicit spatial and semantic understanding of the 3D environment &mdash; the physical constraints, free space, and object-level affordances that govern possible movements.</p>
+          </div>
+          <div class="idea-card">
+            <h4>2. Holistic single-pass prediction</h4>
+            <p>Pose and language are predicted together in one autoregressive pass, since human motion is inherently tied to the semantic interpretation of the actions being performed.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
+  <!-- ============================ METHOD / FRAMEWORK ============================ -->
+  <section class="hero is-small method-section">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3 section-heading">Method</h2>
+        <p class="section-subheading">
+          Given three-point tracking, 3D scene features, and egocentric video, Ego3DLM decodes all four outputs
+          &mdash; past pose, future pose, past narration, future description &mdash; in a single autoregressive pass,
+          trained in three stages.
+        </p>
+        <figure class="paper-figure" style="max-width: 1120px;">
+          <img src="static/images/paper/framework.png" alt="Overview of the Ego3DLM framework: 3D scene feature extraction, Stage I spatial-semantic pretraining, Stage II instruction tuning, and Stage III multi-modal reward GRPO."/>
+          <figcaption>
+            <strong>Overview of the Ego3DLM framework.</strong>
+            <strong>3D Scene Feature Extraction:</strong> 2D semantic features are extracted from egocentric video frames and lifted onto the 3D point cloud; the feature-enhanced point cloud is fed into a Q-Former to produce compact scene query embeddings.
+            <strong>(I) Pre-training</strong> aligns scene, motion, and language via spatial and semantic objectives;
+            <strong>(II) Instruction Tuning</strong> trains simultaneous single-pass generation of all four outputs;
+            <strong>(III) GRPO</strong> refines the model with intra- and inter-modal rewards for pose-language fidelity.
+          </figcaption>
+        </figure>
+
+        <!-- Three stages -->
+        <div class="card-row">
+          <div class="idea-card stage-card">
+            <span class="stage-tag">Stage I</span>
+            <h4>Spatial-Semantic Scene Awareness Pretraining</h4>
+            <p>The LM is pretrained on automatically generated spatial and semantic QA pairs from 3D scenes, instilling obstacle awareness and object-level semantics before any motion reasoning.</p>
+          </div>
+          <div class="idea-card stage-card">
+            <span class="stage-tag">Stage II</span>
+            <h4>Multi-Modal Multi-Task Instruction Tuning</h4>
+            <p>A single autoregressive sequence &mdash; <em>spatial scene description &rarr; past &amp; future motion &rarr; past &amp; future descriptions</em> &mdash; propagates spatial reasoning through pose into language.</p>
+          </div>
+          <div class="idea-card stage-card">
+            <span class="stage-tag">Stage III</span>
+            <h4>Multi-Modal Reward GRPO</h4>
+            <p>Reinforcement finetuning with intra-modal (JPE, BLEU) and inter-modal (motion&ndash;description matching) rewards directly optimizes accuracy and cross-modal fidelity.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ QA DATASET ============================ -->
+  <section class="hero is-small data-section">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="title is-3 section-heading">Spatial-Semantic Scene Awareness Data</h2>
+        <p class="section-subheading">
+          To ground the language model in the 3D environment, we automatically construct a scene-awareness QA dataset
+          &mdash; approximately <strong>535K spatial</strong> and <strong>115K semantic</strong> QA pairs across <strong>208 scenes</strong> &mdash;
+          augmenting Nymeria, which lacks explicit scene descriptions.
+        </p>
+        <figure class="paper-figure" style="max-width: 1080px;">
+          <img src="static/images/paper/data_generation.png" alt="Spatial-semantic scene awareness QA dataset generation: semantic awareness QA types on the left and spatial awareness directional clearance on the right."/>
+          <figcaption>
+            <strong>Semantic Awareness:</strong> for each 3D scene we use egocentric video to auto-generate QA pairs across six types (object, place, object nature, color, number, other) that describe and reason about the environment.
+            <strong>Spatial Awareness:</strong> the environment is partitioned into three angular sectors (front, left, right), and QA pairs predict directional clearance levels and the most navigable direction.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ QUANTITATIVE RESULTS ============================ -->
   <section class="hero is-small results-section">
     <div class="hero-body">
       <div class="container">
-        <h2 class="title is-3">Comparison of results</h2>
-        <p class="methodology-list">
-          Comparison of prediction results on <a href="http://mocap.cs.cmu.edu" target="_blank">CMU-Mocap</a>  <a href="https://www.projects.science.uu.nl/umpm/" target="_blank">(UMPM)</a> dataset. We compare results with <a href="https://arxiv.org/pdf/2111.12073" target="_blank">MRT</a>, <a href="https://arxiv.org/abs/2308.04808" target="_blank">JRT</a>, and <a href="https://arxiv.org/abs/2303.05095" target="_blank">TBIFormer</a>. <strong><span style="color: black;">BLACK</span></strong>: GT (1s+2s), <strong><span style="color: red;">C</span><span style="color: #ffb366;">O</span><span style="color: #66ff66;">L</span><span style="color: #99ccff;">O</span><span style="color: #0059b3;">R</span></strong>: Prediction (2s)
+        <h2 class="title is-3 section-heading">Results</h2>
+        <p class="section-subheading">
+          On the Nymeria benchmark, Ego3DLM achieves state-of-the-art performance across future motion prediction,
+          past motion tracking, and motion description.
         </p>
-        <!-- <div class="columns is-multiline"> -->
-          <div class="columns is-multiline is-mobile is-variable is-0.5">
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/T2P_1.mp4"
-              type="video/mp4">
-            </video>
-          </div>
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/MRT_1.mp4"
-              type="video/mp4">
-            </video>
-          </div>
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/JRT_1.mp4"
-              type="video/mp4">
-            </video>
-          </div>
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/TBI_1.mp4"
-              type="video/mp4">
-            </video>
-          </div>
 
-        <!-- second line -->
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/T2P_7.mp4"
-              type="video/mp4">
-            </video>
-            <h3 class="title is-5">T2P (Ours)</h3>
-            <!-- <h3 class="title is-5">T2P (Ours)</h3> -->
+        <!-- Highlight numbers -->
+        <div class="highlight-row">
+          <div class="highlight-card">
+            <div class="highlight-num">14.1%<span style="font-size:1rem;">&darr;</span></div>
+            <div class="highlight-label">JPE for future motion prediction<br>vs. best baseline</div>
           </div>
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/MRT_7.mp4"
-              type="video/mp4">
-            </video>
-            <h3 class="title is-5">MRT / 2021 NeurIPS</h3>
-            <!-- <h3 class="title is-5">MRT / 2021 NeurIPS</h3> -->
+          <div class="highlight-card">
+            <div class="highlight-num">36.7%<span style="font-size:1rem;">&darr;</span></div>
+            <div class="highlight-label">APE for motion tracking<br>vs. best baseline</div>
           </div>
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/JRT_7.mp4"
-              type="video/mp4">
-            </video>
-            <h3 class="title is-5">JRT / 2023 ICCV</h3>
-            <!-- <h3 class="title is-5">JRT / 2023 ICCV</h3> -->
+          <div class="highlight-card">
+            <div class="highlight-num">60.0%<span style="font-size:1rem;">&uarr;</span></div>
+            <div class="highlight-label">BLEU-4 for future description<br>vs. EgoLM</div>
           </div>
-          <div class="column is-one-quarter">
-            <video class="qual-rows" poster="" id="tree" controls muted loop autoplay playsinline>
-              <!-- Your video here -->
-              <source src="static/videos/TBI_7.mp4" 
-              type="video/mp4">
-            </video>
-            <h3 class="title is-5">TBIFormer / 2023 CVPR</h3>
-            <!-- <h3 class="title is-5">TBIFormer / 2023 CVPR</h3> -->
+          <div class="highlight-card">
+            <div class="highlight-num">56.8%<span style="font-size:1rem;">&darr;</span></div>
+            <div class="highlight-label">Motion&ndash;language alignment<br>distance vs. EgoLM</div>
           </div>
+        </div>
+
+        <!-- Table 1a: Motion Prediction + Tracking -->
+        <p class="table-caption"><strong>Motion prediction and tracking.</strong> Best results in <strong>bold</strong>; arrows denote the better direction.</p>
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr class="group-head">
+                <th class="method" rowspan="2">Method</th>
+                <th colspan="8">Motion Prediction (3 modes)</th>
+                <th colspan="5">Motion Tracking</th>
+              </tr>
+              <tr>
+                <th>APE&darr;</th><th>JPE&darr;</th><th>ADE&darr;</th><th>ADE<sub>2s</sub>&darr;</th><th>FDE&darr;</th><th>FDE<sub>2s</sub>&darr;</th><th>FID&darr;</th><th>Div.&uarr;</th>
+                <th>APE&darr;</th><th>Upper&darr;</th><th>Lower&darr;</th><th>J.A.&darr;</th><th>Root&darr;</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="method">FIction</td><td>206.2</td><td>564.7</td><td>558.3</td><td>416.7</td><td>904.3</td><td>494.9</td><td>0.3275</td><td>0.7432</td><td>181.1</td><td>114.0</td><td>282.3</td><td>31.28</td><td>34.81</td></tr>
+              <tr><td class="method">EgoLM (GT motion)</td><td>168.8</td><td>583.9</td><td>540.0</td><td>299.0</td><td>1,059.5</td><td>494.8</td><td>1.3840</td><td>0.0055</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td></tr>
+              <tr><td class="method">EgoLM (Inst. tuning)</td><td>184.9</td><td>579.4</td><td>552.6</td><td>329.9</td><td>983.6</td><td>519.2</td><td>0.2137</td><td>0.6142</td><td>161.9</td><td>95.6</td><td>265.6</td><td>33.63</td><td>24.01</td></tr>
+              <tr><td class="method">UniEgoMotion</td><td>151.5</td><td>424.3</td><td>409.7</td><td>223.9</td><td>720.5</td><td>360.4</td><td>0.1530</td><td>0.9022</td><td>152.2</td><td>79.4</td><td>233.3</td><td>26.48</td><td>22.71</td></tr>
+              <tr class="ours"><td class="method">Ours (Ego3DLM)</td><td>147.9</td><td>364.5</td><td>343.9</td><td>205.9</td><td>648.1</td><td>312.6</td><td>0.0160</td><td>1.0624</td><td>96.4</td><td>53.1</td><td>152.7</td><td>22.30</td><td>19.57</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Table 1b: Language description -->
+        <p class="table-caption"><strong>Motion description and narration.</strong> <em>x</em>-<em>y</em> Align. denotes motion&ndash;text alignment distance (d<sub>pp</sub>).</p>
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr class="group-head">
+                <th class="method" rowspan="2">Method</th>
+                <th colspan="6">Future Motion Description</th>
+                <th colspan="6">Past Motion Narration</th>
+                <th rowspan="2"><em>x</em>-<em>y</em><br>Align.&darr;</th>
+              </tr>
+              <tr>
+                <th>Bleu-4&uarr;</th><th>Bleu-1&uarr;</th><th>Rouge<sub>L</sub>&uarr;</th><th>SBert&uarr;</th><th>R@3&uarr;</th><th>d<sub>pg</sub>&darr;</th>
+                <th>Bleu-4&uarr;</th><th>Bleu-1&uarr;</th><th>Rouge<sub>L</sub>&uarr;</th><th>SBert&uarr;</th><th>R@3&uarr;</th><th>d<sub>pg</sub>&darr;</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="method">LLM (Qwen 2.5 7B)</td><td>0.0202</td><td>0.0970</td><td>0.2343</td><td>0.6120</td><td>0.1940</td><td>6.6730</td><td>0.0232</td><td>0.1477</td><td>0.2267</td><td>0.6183</td><td>0.1944</td><td>6.9648</td><td>&ndash;</td></tr>
+              <tr><td class="method">EgoLM (Inst. tuning)</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td><td>0.0649</td><td>0.3002</td><td>0.2642</td><td>0.5900</td><td>0.2639</td><td>6.8992</td><td>9.8686</td></tr>
+              <tr class="ours"><td class="method">Ours (Ego3DLM)</td><td>0.1039</td><td>0.3839</td><td>0.3004</td><td>0.6206</td><td>0.2911</td><td>6.3507</td><td>0.1107</td><td>0.3966</td><td>0.3195</td><td>0.6458</td><td>0.4264</td><td>4.9470</td><td>4.2571</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </section>
 
-
-  <section class="hero is-small methodology-section">
+  <!-- ============================ QUALITATIVE RESULTS ============================ -->
+  <section class="hero is-small qual-section">
     <div class="hero-body">
       <div class="container">
-        <h2 class="title is-3">More results</h2>
-        <p class="methodology-list">
-          We show more results of our <strong>T2P</strong> model on CMU-Mocap (UMPM) samples. <strong><span style="color: black;">BLACK</span></strong>: GT (1s+2s), <strong><span style="color: red;">C</span><span style="color: #ffb366;">O</span><span style="color: #66ff66;">L</span><span style="color: #99ccff;">O</span><span style="color: #0059b3;">R</span></strong>: Prediction (2s)
+        <h2 class="title is-3 section-heading">Qualitative Results</h2>
+        <p class="section-subheading">
+          Ego3DLM produces motion that conforms to both physical scene constraints and past context, while its
+          simultaneously generated description faithfully reflects the predicted motion.
         </p>
-        <div class="columns is-multiline is-mobile">
-          <div class="column is-one-third">
-            <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline height="80%">
-              <!-- Your video here -->
-              <source src="static/videos/more_1.mp4" type="video/mp4">
-            </video>
-            <!-- <h3 class="title is-5">T2P (Ours)</h3> -->
-          </div>
-          <div class="column is-one-third">
-            <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline height="80%">
-              <!-- Your video here -->
-              <source src="static/videos/more_2.mp4" type="video/mp4">
-            </video>
-            <!-- <h3 class="title is-5">MRT / 2021 NeurIPS</h3> -->
-          </div>
-          <div class="column is-one-third">
-            <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline height="80%">
-              <!-- Your video here -->
-              <source src="static/videos/more_3.mp4" type="video/mp4">
-            </video>
-            <!-- <h3 class="title is-5">JRT / 2023 ICCV</h3> -->
-          </div>
-        <!-- <img class="methodology-image" src="static/images/OutMerged_Huang_lane_0_150_comp.gif" alt="MY ALT TEXT"/>
-        <img class="methodology-image" src="static/images/OutMerged_jordan_hall_0_150_comp.gif" alt="MY ALT TEXT"/> -->
-
+        <figure class="paper-figure" style="max-width: 1120px;">
+          <img src="static/images/paper/qual.png" alt="Qualitative comparison of motion forecasting and tracking against UniEgoMotion, EgoLM, and Ego3DLM without 3D scene."/>
+          <figcaption>
+            Qualitative results for motion forecasting and tracking. The ground-truth (GT) past motion is shown in
+            <span style="color:#c0392b;"><strong>red</strong></span>, and predicted future motion in
+            <span style="color:#2b57a5;"><strong>blue</strong></span>.
+            For the future motion narration below the figure,
+            <span style="color:#1a9850;"><strong>green</strong></span> highlights phrases matching the GT, while
+            <span style="color:#c0392b;"><strong>red</strong></span> highlights incorrect or mismatched descriptions.
+            Ego3DLM walks around the bed to the door, whereas the variant without a 3D scene penetrates the wall.
+          </figcaption>
+        </figure>
       </div>
     </div>
   </section>
 
-  <section class="hero is-small methodology-section">
+  <!-- ============================ VIDEO RESULTS (template — populate when videos are provided) ============================ -->
+  <!--
+    TODO: A video results section is ready below. When video files are provided, place them under
+    static/videos/ (e.g. static/videos/ego3dlm/result_1.mp4) and un-comment this section, updating the <source> paths.
+
+  <section class="hero is-small results-section">
     <div class="hero-body">
-      <div class="container">
-        <h2 class="title is-3">JRDB-GMP dataset</h2>
-        <p class="methodology-list">
-          We also parse a new dataset to train forecasting model on complex (<strong>long-term: 2s+</strong>, <strong>multi-agent: 3+</strong>), real world data. Parsed from <a href="https://jrdb.erc.monash.edu" target="_blank">JRDB dataset</a>, which is acquired from a mobile robot on campus. (RGB+LiDAR)
-        </p>
-        <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline width="1000px">
-          <!-- Your video here -->
-          <source src="static/videos/jordan_hall_frames_1100_1200_rgb-ezgif.com-gif-to-mp4-converter.mp4"
-          type="video/mp4">
-        </video>
-        <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline width="1000px">
-          <!-- Your video here -->
-          <source src="static/videos/forbes_cafe_frames_400_500_rgb-ezgif.com-gif-to-mp4-converter-2.mp4"
-          type="video/mp4">
-        </video>
-        <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline width="1000px">
-          <!-- Your video here -->
-          <source src="static/videos/intersection_frames_0_100_rgb-ezgif.com-gif-to-mp4-converter-2.mp4"
-          type="video/mp4">
-        </video>
+      <div class="container has-text-centered">
+        <h2 class="title is-3 section-heading">Video Results</h2>
+        <p class="section-subheading">Predicted motion and narration on Nymeria sequences.</p>
         <div class="columns is-multiline is-mobile">
           <div class="column is-one-third">
-            <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline height="80%">
-              <!-- Your video here -->
-              <source src="static/videos/jordan_hall_frames_1100_1200_pose-ezgif.com-gif-to-mp4-converter.mp4" type="video/mp4">
+            <video controls muted loop autoplay playsinline style="width:100%;">
+              <source src="static/videos/ego3dlm/result_1.mp4" type="video/mp4">
             </video>
-            <!-- <h3 class="title is-5">T2P (Ours)</h3> -->
           </div>
           <div class="column is-one-third">
-            <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline height="80%">
-              <!-- Your video here -->
-              <source src="static/videos/forbes_cafe_frames_400_500_pose-ezgif.com-gif-to-mp4-converter-2.mp4" type="video/mp4">
+            <video controls muted loop autoplay playsinline style="width:100%;">
+              <source src="static/videos/ego3dlm/result_2.mp4" type="video/mp4">
             </video>
-            <!-- <h3 class="title is-5">MRT / 2021 NeurIPS</h3> -->
           </div>
           <div class="column is-one-third">
-            <video class="autoplay-desktop" poster="" id="tree" controls muted loop autoplay playsinline height="80%">
-              <!-- Your video here -->
-              <source src="static/videos/intersection_frames_0_100_pose-ezgif.com-gif-to-mp4-converter-2.mp4" type="video/mp4">
+            <video controls muted loop autoplay playsinline style="width:100%;">
+              <source src="static/videos/ego3dlm/result_3.mp4" type="video/mp4">
             </video>
-            <!-- <h3 class="title is-5">JRT / 2023 ICCV</h3> -->
           </div>
-        <!-- <img class="methodology-image" src="static/images/OutMerged_Huang_lane_0_150_comp.gif" alt="MY ALT TEXT"/>
-        <img class="methodology-image" src="static/images/OutMerged_jordan_hall_0_150_comp.gif" alt="MY ALT TEXT"/> -->
-
+        </div>
       </div>
     </div>
   </section>
+  -->
 
-<!-- 
+  <!-- ============================ BIBTEX ============================ -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>@inproceedings{bae2026ego3dlm,
+  title     = {Ego-Human Motion Prediction with 3D-Aware LLM},
+  author    = {Bae, Yujin and Jeong, Jaewoo and Kim, Hyeonseong and Yoon, Kuk-Jin},
+  booktitle = {Proceedings of the European Conference on Computer Vision (ECCV)},
+  year      = {2026}
+}</code></pre>
+    </div>
+  </section>
+
+  <!-- ============================ FOOTER ============================ -->
   <footer class="footer">
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-8">
-          <div class="content">
-  
+          <div class="content has-text-centered">
             <p>
-              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
-              You are free to borrow the of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
-              Commons Attribution-ShareAlike 4.0 International License</a>.
+              This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a>, adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+              This website is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
             </p>
-  
           </div>
         </div>
       </div>
     </div>
-  </footer> -->
+  </footer>
 
-<!--BibTex citation -->
-  <section class="section" id="BibTeX">
-    <div class="container is-max-desktop content">
-      <h2 class="title">BibTeX</h2>
-      <pre><code>
-        @inproceedings{jeong2024multi,
-          title={Multi-agent Long-term 3D Human Pose Forecasting via Interaction-aware Trajectory Conditioning},
-          author={Jeong, Jaewoo and Park, Daehee and Yoon, Kuk-Jin},
-          booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-          pages={1617--1628},
-          year={2024}
-        }
-      </code></pre>
-    </div>
-  </section>
-
-  <!-- <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      if (window.innerWidth > 768) {  // Adjust the width as per your needs
-        const videos = document.querySelectorAll('.autoplay-desktop');
-        videos.forEach(video => {
-          video.setAttribute('autoplay', true);
-        });
-      }
-    });
-  </script> -->
-
-    <!-- Statcounter code for t2p project page
-  https://jaewoo97.github.io/t2p_/ on Google Sites (new) -->
-  <script type="text/javascript">
-    var sc_project=13008448; 
-    var sc_invisible=1; 
-    var sc_security="16817539"; 
-    </script>
-    <script type="text/javascript"
-    src="https://www.statcounter.com/counter/counter.js"
-    async></script>
-    <noscript><div class="statcounter"><a title="Web Analytics"
-    href="https://statcounter.com/" target="_blank"><img
-    class="statcounter"
-    src="https://c.statcounter.com/13008448/0/16817539/1/"
-    alt="Web Analytics"
-    referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
-    <!-- End of Statcounter Code -->
 </body>
 </html>
