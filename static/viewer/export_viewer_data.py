@@ -39,10 +39,12 @@ SKELETON_PAIRS = [
 ]
 
 # samples to publish: (id, human label, method-relative path)
+# Chosen so ours_withGRPO has the lowest future ADE across all 6 methods
+# (clear margin, visible motion, GRPO beating no-GRPO), across distinct scenes.
 SAMPLES = [
-    ('kitchen',  'Kitchen — walking & reaching a chair',        '20230822_s0_kyle_parker_act2_y3l7lv/0098.pt'),
-    ('bedroom',  'Bedroom — walking out toward the door',       '20230815_s0_samantha_lester_act0_513kae/0068.pt'),
-    ('tracking', 'Living room — turning / tracking',            '20230817_s0_brittney_powell_act3_1t2she/0041.pt'),
+    ('bedroom', 'Bedroom — walking out toward the door',   '20230815_s0_samantha_lester_act0_513kae/0068.pt'),
+    ('living',  'Living room — walking and turning',        '20230817_s0_brittney_powell_act3_1t2she/0050.pt'),
+    ('open',    'Open room — walking across the space',     '20230821_s1_william_wilson_act3_gnf0bz/0072.pt'),
 ]
 
 # world (+Z up) -> viewer (+Y up):  (x,y,z) -> (x, z, -y)

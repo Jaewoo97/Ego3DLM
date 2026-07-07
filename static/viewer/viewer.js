@@ -173,8 +173,8 @@ async function loadSample(id) {
   grid.material.transparent = true; grid.material.opacity = 0.35;
   scene.add(grid);
 
-  // framing
-  total = (viewMode === 'track') ? m.n_past : (m.n_past + m.n_future);
+  // framing — forecasting timeline is the future segment only
+  total = (viewMode === 'track') ? m.n_past : m.n_future;
   frame = 0;
   document.getElementById('timeline').max = String(total - 1);
   document.getElementById('s-label').textContent = m.label;
@@ -196,40 +196,37 @@ function frameCamera() {
 }
 
 // ── per-frame pose update ───────────────────────────────────────────────────
+// Forecasting animates ONLY the future segment (every method starts at the same
+// future timepoint); the observed past is shown as trajectory context, so there
+// is no jump across the past->future segment gap. Tracking animates the past.
+// Each skeleton is hidden once its own sequence ends — predictions are never
+// padded to a common length.
 function setFrame(t) {
   frame = Math.max(0, Math.min(total - 1, Math.round(t)));
-  const np = meta.n_past, bones = meta.bones;
-  const inFuture = (viewMode === 'forecast') && (frame >= np);
-  const fidx = frame - np;
+  const bones = meta.bones;
+  const forecast = (viewMode === 'forecast');
 
-  // GT always visible
   const gt = skels[GT_KEY];
-  const gtJoints = (viewMode === 'track' || frame < np) ? meta.gt.past[Math.min(frame, np - 1)]
-                                                        : meta.gt.future[fidx];
-  poseSkeleton(gt, gtJoints, bones);
-  gt.group.visible = true;
-  gt.linePast.visible = true;
-  gt.lineFut.visible = (viewMode === 'forecast');
+  const gtseq = forecast ? meta.gt.future : meta.gt.past;
+  const gvis = frame < gtseq.length;
+  gt.group.visible = gvis;
+  if (gvis) poseSkeleton(gt, gtseq[frame], bones);
+  gt.linePast.visible = true;         // observed-past path shown as context
+  gt.lineFut.visible = forecast;
 
   for (const key of Object.keys(meta.methods)) {
     const sk = skels[key], on = !!enabled[key];
-    const m = meta.methods[key];
-    let show = false, joints = null;
-    if (on) {
-      if (viewMode === 'track') { show = true; joints = m.pred_past[Math.min(frame, np - 1)]; }
-      else if (inFuture) { show = true; joints = m.pred_future[fidx]; }
-    }
+    const seq = forecast ? meta.methods[key].pred_future : meta.methods[key].pred_past;
+    const show = on && frame < seq.length;   // no padding: hide once this method's data ends
     sk.group.visible = show;
-    if (show) poseSkeleton(sk, joints, bones);
-    sk.lineFut.visible = on && viewMode === 'forecast';
-    sk.linePast.visible = on && viewMode === 'track';
+    if (show) poseSkeleton(sk, seq[frame], bones);
+    sk.lineFut.visible = on && forecast;
+    sk.linePast.visible = on && !forecast;
   }
 
   document.getElementById('timeline').value = String(frame);
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
-  const phase = (viewMode === 'track') ? 'tracking past'
-              : (frame < np ? 'given past' : 'predicting future');
-  document.getElementById('phase').textContent = phase;
+  document.getElementById('phase').textContent = forecast ? 'predicting future' : 'tracking past';
   updateCot();
 }
 
@@ -285,7 +282,7 @@ document.getElementById('speed').onchange = e => { speed = parseFloat(e.target.v
 document.getElementById('sample').onchange = e => { setPlaying(false); loadSample(e.target.value); };
 document.getElementById('view').onchange = e => {
   viewMode = e.target.value;
-  total = (viewMode === 'track') ? meta.n_past : (meta.n_past + meta.n_future);
+  total = (viewMode === 'track') ? meta.n_past : meta.n_future;
   document.getElementById('timeline').max = String(total - 1);
   setPlaying(false); setFrame(0);
 };
