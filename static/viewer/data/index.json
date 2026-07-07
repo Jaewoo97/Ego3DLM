@@ -1,0 +1,30 @@
+{
+ "samples": [
+  {
+   "id": "kitchen",
+   "label": "Kitchen \u2014 walking & reaching a chair",
+   "file": "kitchen.json",
+   "pc_kb": 586
+  },
+  {
+   "id": "bedroom",
+   "label": "Bedroom \u2014 walking out toward the door",
+   "file": "bedroom.json",
+   "pc_kb": 586
+  },
+  {
+   "id": "tracking",
+   "label": "Living room \u2014 turning / tracking",
+   "file": "tracking.json",
+   "pc_kb": 586
+  }
+ ],
+ "methods": [
+  "ours_withGRPO",
+  "ours_noGRPO",
+  "ours_no3d",
+  "fiction",
+  "uniegomotion",
+  "egolm"
+ ]
+}

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ego3DLM — Interactive 3D Viewer</title>
+<link rel="icon" href="../images/favicon.ico">
+<style>
+  :root { --panel:#ffffff; --ink:#222; --sub:#666; --line:#e6e8ec; --accent:#2b57a5; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; font-family:'Noto Sans',system-ui,sans-serif; color:var(--ink); background:#eef0f3; }
+  #app { position:fixed; inset:0; display:flex; flex-direction:column; }
+  #stage { position:relative; flex:1; min-height:0; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  #hint { position:absolute; left:12px; bottom:10px; font-size:12px; color:var(--sub);
+          background:rgba(255,255,255,.72); padding:4px 9px; border-radius:6px; pointer-events:none; }
+  #loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+             font-size:15px; color:var(--sub); background:rgba(238,240,243,.85); z-index:5; }
+  #loading.hidden { display:none; }
+
+  /* control bar */
+  #bar { flex:0 0 auto; background:var(--panel); border-top:1px solid var(--line);
+         padding:10px 14px; display:flex; flex-wrap:wrap; gap:14px 18px; align-items:center; }
+  .grp { display:flex; align-items:center; gap:7px; }
+  .grp label.k { font-size:12px; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+  select, button { font:inherit; font-size:13px; padding:5px 9px; border:1px solid var(--line);
+                   border-radius:7px; background:#fff; color:var(--ink); cursor:pointer; }
+  button:hover, select:hover { border-color:#c3ccda; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #play { min-width:76px; }
+  input[type=range] { vertical-align:middle; cursor:pointer; }
+  #timeline { flex:1 1 220px; min-width:160px; }
+  #framelab { font-size:12px; color:var(--sub); min-width:118px; font-variant-numeric:tabular-nums; }
+
+  /* method chips */
+  #methods { display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; }
+  .chip { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; padding:4px 9px;
+          border:1px solid var(--line); border-radius:999px; cursor:pointer; user-select:none; background:#fff; }
+  .chip .sw { width:11px; height:11px; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.12); }
+  .chip.off { opacity:.42; }
+  .chip .ade { color:var(--sub); font-variant-numeric:tabular-nums; }
+
+  /* info overlay */
+  #info { position:absolute; left:12px; top:12px; max-width:min(46%,440px);
+          background:rgba(255,255,255,.82); backdrop-filter:blur(3px);
+          border:1px solid var(--line); border-radius:10px; padding:11px 13px; font-size:13px; }
+  #info h3 { margin:0 0 4px 0; font-size:14px; }
+  #info .cot { color:#374151; margin-top:6px; font-size:12.5px; line-height:1.45; }
+  #info .cot b { color:var(--accent); }
+  #phase { display:inline-block; font-size:11px; padding:1px 8px; border-radius:999px;
+           background:#eef3fb; color:var(--accent); margin-left:6px; vertical-align:middle; }
+  @media (max-width:640px){ #info{ max-width:70%; } #framelab{ min-width:0; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <div id="loading">Loading scene…</div>
+    <div id="info">
+      <h3><span id="s-label">—</span><span id="phase">—</span></h3>
+      <div id="s-cot" class="cot"></div>
+    </div>
+    <div id="hint">drag to orbit · right-drag to pan · scroll to zoom</div>
+  </div>
+
+  <div id="bar">
+    <div class="grp">
+      <label class="k" for="sample">Scene</label>
+      <select id="sample"></select>
+    </div>
+    <div class="grp">
+      <label class="k" for="view">View</label>
+      <select id="view">
+        <option value="forecast">Forecasting</option>
+        <option value="track">Tracking (past)</option>
+      </select>
+    </div>
+    <div class="grp">
+      <button id="play" class="primary">▶ Play</button>
+      <span id="framelab">frame 0 / 0</span>
+    </div>
+    <input id="timeline" type="range" min="0" max="1" value="0" step="1">
+    <div class="grp">
+      <label class="k" for="speed">Speed</label>
+      <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+    </div>
+    <div class="grp" id="methods"></div>
+    <div class="grp">
+      <label class="k" for="psize">Points</label>
+      <input id="psize" type="range" min="0.006" max="0.05" step="0.002" value="0.02">
+    </div>
+    <div class="grp">
+      <button id="reset">Reset view</button>
+      <button id="full">⛶</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "../js/vendor/three.module.min.js" } }
+</script>
+<script type="module" src="viewer.js"></script>
+</body>
+</html>

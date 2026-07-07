@@ -2,6 +2,10 @@
 # The figures and PDFs the page uses are copied into static/.
 2439/
 
+# Large research assets / model dumps — only used locally to generate the
+# interactive-viewer data (see static/viewer/export_viewer_data.py). ~1GB+.
+static/ECCV2026/
+
 # OS cruft
 .DS_Store
 **/.DS_Store
