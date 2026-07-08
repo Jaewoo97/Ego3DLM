@@ -6,7 +6,7 @@ import { OrbitControls } from '../js/vendor/OrbitControls.js';
 const DATA = 'spatial/';
 const UP = new THREE.Vector3(0, 1, 0);
 const BONE_R = 0.02, JOINT_R = 0.028;
-const HALF = THREE.MathUtils.degToRad(45), SEG = 18;
+const HALF = THREE.MathUtils.degToRad(60), SEG = 22;   // ±60° sensing cones (front/left/right overlap ~30°)
 const CAT_COL = [0xef4444, 0xf59e0b, 0x22c55e];      // LOW / MID / HIGH
 const CAT_TXT = ['Low', 'Mid', 'High'];
 const DIR_TXT = ['Front', 'Left', 'Right'];

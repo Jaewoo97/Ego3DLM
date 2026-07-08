@@ -44,6 +44,22 @@ def _sq(x): x=_np(x); return x[0] if x.ndim==4 else x
 def cat(x):  return 0 if x < 1.0 else (1 if x < 3.0 else 2)     # LOW / MID / HIGH
 
 
+def smooth_fwd(gp):
+    """Per-frame heading = smoothed horizontal root velocity (sign-stable),
+    holding the last heading when nearly still. More reliable than a shoulder
+    cross-product, whose front/back sign is ambiguous."""
+    root = gp[:, 0].copy(); root[:, 1] = 0.0
+    vel = np.gradient(root, axis=0); vel[:, 1] = 0.0
+    T = len(vel); out = np.zeros((T, 3)); last = None
+    for t in range(T):
+        w = vel[max(0, t-3):t+4].sum(0); n = np.linalg.norm(w)
+        if n > 0.02: last = w / n
+        out[t] = last if last is not None else np.array([0., 0., 1.])
+    for t in range(T):                       # backfill any leading stills
+        if np.linalg.norm(out[t]) < 1e-6: out[t] = out[max(t-1, 0)]
+    return out
+
+
 def clearance(pc, head, fwd):
     fwd = fwd.copy(); fwd[1] = 0; fwd /= np.linalg.norm(fwd) + 1e-9
     right = np.cross(fwd, UP); right /= np.linalg.norm(right) + 1e-9
@@ -55,8 +71,8 @@ def clearance(pc, head, fwd):
     dirs = {'front': fwd, 'left': -right, 'right': right}
     free = {}
     for k, v in dirs.items():
-        inc = (ru @ v) > CONE
-        free[k] = float(dd[inc].min()) if inc.any() else MAXD
+        dc = np.sort(dd[(ru @ v) > CONE])
+        free[k] = float(dc[4]) if len(dc) >= 5 else MAXD       # 5th-nearest: robust to lone noise points
     best = max(free, key=free.get)
     return fwd, right, free, best
 
@@ -77,11 +93,11 @@ def main():
         gp, pc = W(gp), W(pc)
         floor_y = float(np.percentile(gp[:, :, 1], 2))            # ~feet level
 
+        headings = smooth_fwd(gp)
         frames = []
         for t in range(gp.shape[0]):
             p = gp[t]; head = p[HEAD_I]
-            fwd = np.cross(p[LSH_I] - p[RSH_I], UP)
-            fwd, right, free, best = clearance(pc, head, fwd)
+            fwd, right, free, best = clearance(pc, head, headings[t])
             ground = [float(head[0]), floor_y, float(head[2])]
             frames.append(dict(
                 ground=r4(ground),
