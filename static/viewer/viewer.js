@@ -129,6 +129,9 @@ async function loadSample(id) {
   const buf = await (await fetch(DATA + m.pc_file)).arrayBuffer();
   disposeSample();
   meta = m;
+  // continuous forecast sequence: observed past -> eased bridge -> future
+  meta._gtFwd = [...m.gt.past, ...(m.gt.bridge || []), ...m.gt.future];
+  meta._futStart = m.n_past + (m.n_bridge || 0);
 
   // point cloud, coloured by height
   const pos = new Float32Array(buf);
@@ -158,7 +161,7 @@ async function loadSample(id) {
     const sk = makeSkeleton(color, m.n_joints, m.bones.length);
     if (key === GT_KEY) {
       sk.linePast = rootLine(m.gt.past, color, 0.35);
-      sk.lineFut = rootLine(m.gt.future, color, 0.6);
+      sk.lineFut = rootLine(meta._gtFwd, color, 0.55);   // full continuous path (past->future)
     } else {
       sk.linePast = rootLine(entry.pred_past, color, 0.5);
       sk.lineFut = rootLine(entry.pred_future, color, 0.75);
@@ -173,8 +176,8 @@ async function loadSample(id) {
   grid.material.transparent = true; grid.material.opacity = 0.35;
   scene.add(grid);
 
-  // framing — forecasting timeline is the future segment only
-  total = (viewMode === 'track') ? m.n_past : m.n_future;
+  // framing — forecasting plays past -> bridge -> future as one continuous sequence
+  total = (viewMode === 'track') ? m.n_past : meta._gtFwd.length;
   frame = 0;
   document.getElementById('timeline').max = String(total - 1);
   document.getElementById('s-label').textContent = m.label;
@@ -207,26 +210,37 @@ function setFrame(t) {
   const forecast = (viewMode === 'forecast');
 
   const gt = skels[GT_KEY];
-  const gtseq = forecast ? meta.gt.future : meta.gt.past;
-  const gvis = frame < gtseq.length;
-  gt.group.visible = gvis;
-  if (gvis) poseSkeleton(gt, gtseq[frame], bones);
-  gt.linePast.visible = true;         // observed-past path shown as context
-  gt.lineFut.visible = forecast;
+  if (forecast) {                        // GT animates past -> bridge -> future
+    poseSkeleton(gt, meta._gtFwd[frame], bones);
+    gt.group.visible = true;
+  } else {                               // tracking: observed past only
+    const gvis = frame < meta.gt.past.length;
+    gt.group.visible = gvis;
+    if (gvis) poseSkeleton(gt, meta.gt.past[frame], bones);
+  }
+  gt.linePast.visible = !forecast;       // track: observed-past path
+  gt.lineFut.visible = forecast;         // forecast: full continuous path
 
+  const futStart = meta._futStart;
   for (const key of Object.keys(meta.methods)) {
     const sk = skels[key], on = !!enabled[key];
-    const seq = forecast ? meta.methods[key].pred_future : meta.methods[key].pred_past;
-    const show = on && frame < seq.length;   // no padding: hide once this method's data ends
+    let show = false, joints = null;
+    if (on && forecast && frame >= futStart) {    // predictions overlay on the future only
+      const idx = frame - futStart, seq = meta.methods[key].pred_future;
+      if (idx < seq.length) { show = true; joints = seq[idx]; }   // no padding
+    } else if (on && !forecast) {                 // tracking: pred_past
+      const seq = meta.methods[key].pred_past;
+      if (frame < seq.length) { show = true; joints = seq[frame]; }
+    }
     sk.group.visible = show;
-    if (show) poseSkeleton(sk, seq[frame], bones);
+    if (show) poseSkeleton(sk, joints, bones);
     sk.lineFut.visible = on && forecast;
     sk.linePast.visible = on && !forecast;
   }
 
   document.getElementById('timeline').value = String(frame);
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
-  document.getElementById('phase').textContent = forecast ? 'predicting future' : 'tracking past';
+  document.getElementById('phase').textContent = forecast ? (frame < meta._futStart ? 'observed past' : 'predicting future') : 'tracking past';
   updateCot();
 }
 
@@ -282,7 +296,7 @@ document.getElementById('speed').onchange = e => { speed = parseFloat(e.target.v
 document.getElementById('sample').onchange = e => { setPlaying(false); loadSample(e.target.value); };
 document.getElementById('view').onchange = e => {
   viewMode = e.target.value;
-  total = (viewMode === 'track') ? meta.n_past : meta.n_future;
+  total = (viewMode === 'track') ? meta.n_past : meta._gtFwd.length;
   document.getElementById('timeline').max = String(total - 1);
   setPlaying(false); setFrame(0);
 };

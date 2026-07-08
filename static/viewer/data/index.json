@@ -7,9 +7,9 @@
    "pc_kb": 586
   },
   {
-   "id": "open",
-   "label": "Open room \u2014 walking across the space",
-   "file": "open.json",
+   "id": "turn",
+   "label": "Indoor scene \u2014 walking and turning",
+   "file": "turn.json",
    "pc_kb": 586
   },
   {

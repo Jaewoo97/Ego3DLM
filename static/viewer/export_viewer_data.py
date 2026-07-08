@@ -44,7 +44,7 @@ SKELETON_PAIRS = [
 # with a large torso lean look weird, so they're excluded.
 SAMPLES = [
     ('kitchen', 'Kitchen — walking across the room',      '20230822_s0_kyle_parker_act2_y3l7lv/0062.pt'),
-    ('open',    'Open room — walking across the space',    '20230821_s1_william_wilson_act3_gnf0bz/0072.pt'),
+    ('turn',    'Indoor scene — walking and turning',      '20230823_s1_alison_riddle_act1_ayav9z/0088.pt'),
     ('living',  'Living room — walking and turning',       '20230817_s0_brittney_powell_act3_1t2she/0050.pt'),
 ]
 
@@ -130,6 +130,16 @@ def main():
         # GT (reference frame already)
         gt_past, gt_future = W(ref['gp']), W(ref['gf'])
 
+        # The past & future are separate narrated segments with a real spatial
+        # seam; bridge it with a few eased frames so past->future playback is
+        # spatiotemporally continuous (natural walking speed, no teleport).
+        A, Bf = gt_past[-1], gt_future[0]
+        step = float(np.median(np.linalg.norm(np.diff(gt_future[:, 0], axis=0), axis=1))) + 1e-6
+        n_bridge = int(np.clip(round(np.linalg.norm(Bf[0] - A[0]) / step), 2, 6))
+        ss = lambda x: x * x * (3 - 2 * x)                        # smoothstep ease
+        gt_bridge = np.stack([A * (1 - ss((i + 1) / (n_bridge + 1))) +
+                              Bf * ss((i + 1) / (n_bridge + 1)) for i in range(n_bridge)])
+
         methods_out = {}
         for m, mlabel, color in METHODS:
             info = per[m]
@@ -151,9 +161,10 @@ def main():
         meta = dict(
             id=sid, label=label,
             fps=FPS, n_past=int(gt_past.shape[0]), n_future=int(gt_future.shape[0]),
+            n_bridge=int(n_bridge),
             n_joints=int(gt_past.shape[1]), bones=SKELETON_PAIRS,
             gt=dict(label='Ground truth', color=GT_COLOR,
-                    past=r3(gt_past), future=r3(gt_future)),
+                    past=r3(gt_past), bridge=r3(gt_bridge), future=r3(gt_future)),
             methods=methods_out,
             pc_file=f'{sid}.pc.bin', pc_count=int(pc.shape[0]),
             person_center=[0, 0, 0],
