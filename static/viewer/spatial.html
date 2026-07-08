@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ego3DLM — Spatial Scene-Awareness</title>
+<link rel="icon" href="../images/favicon.ico">
+<style>
+  :root{--ink:#222;--sub:#666;--line:#e6e8ec;--accent:#2b57a5;--low:#ef4444;--mid:#f59e0b;--high:#22c55e;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;font-family:'Noto Sans',system-ui,sans-serif;color:var(--ink);background:#eef0f3;}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
+  #stage{position:relative;flex:1;min-height:0;}
+  canvas{display:block;width:100%;height:100%;touch-action:none;}
+  #hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--sub);
+        background:rgba(255,255,255,.72);padding:4px 9px;border-radius:6px;pointer-events:none;}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sub);
+           background:rgba(238,240,243,.85);z-index:5;}
+  #loading.hidden{display:none;}
+  #readout{position:absolute;left:12px;top:12px;background:rgba(255,255,255,.85);backdrop-filter:blur(3px);
+           border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13px;min-width:210px;}
+  #readout h3{margin:0 0 7px;font-size:13px;}
+  .row{display:flex;align-items:center;gap:8px;margin:3px 0;font-variant-numeric:tabular-nums;}
+  .row .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;}
+  .row .dir{width:44px;color:var(--sub);}
+  .row .lvl{font-weight:700;width:42px;}
+  .row .m{color:var(--sub);}
+  .row.best{background:#eef3fb;border-radius:6px;padding:2px 5px;margin-left:-5px;}
+  #best{margin-top:7px;font-size:12.5px;}
+  #best b{color:var(--accent);}
+  #bar{flex:0 0 auto;background:#fff;border-top:1px solid var(--line);padding:10px 14px;
+       display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;}
+  .grp{display:flex;align-items:center;gap:7px;}
+  label.k{font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;}
+  select,button{font:inherit;font-size:13px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);cursor:pointer;}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  #play{min-width:76px;}
+  #timeline{flex:1 1 200px;min-width:150px;}
+  #framelab{font-size:12px;color:var(--sub);min-width:104px;font-variant-numeric:tabular-nums;}
+  .legend{display:flex;gap:10px;font-size:12px;color:var(--sub);align-items:center;}
+  .legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:3px;vertical-align:-1px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <div id="loading">Loading scene…</div>
+    <div id="readout">
+      <h3>Directional clearance</h3>
+      <div class="row" data-dir="0"><span class="dot"></span><span class="dir">Front</span><span class="lvl"></span><span class="m"></span></div>
+      <div class="row" data-dir="1"><span class="dot"></span><span class="dir">Left</span><span class="lvl"></span><span class="m"></span></div>
+      <div class="row" data-dir="2"><span class="dot"></span><span class="dir">Right</span><span class="lvl"></span><span class="m"></span></div>
+      <div id="best">Best direction: <b>—</b></div>
+    </div>
+    <div id="hint">drag to orbit · right-drag to pan · scroll to zoom</div>
+  </div>
+  <div id="bar">
+    <div class="grp"><label class="k" for="sample">Scene</label><select id="sample"></select></div>
+    <div class="grp"><button id="play" class="primary">▶ Play</button><span id="framelab">frame 0 / 0</span></div>
+    <input id="timeline" type="range" min="0" max="1" value="0" step="1">
+    <div class="grp"><label class="k" for="speed">Speed</label>
+      <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></div>
+    <div class="legend"><span><span class="sw" style="background:#ef4444"></span>Low</span><span><span class="sw" style="background:#f59e0b"></span>Mid</span><span><span class="sw" style="background:#22c55e"></span>High</span></div>
+    <div class="grp"><button id="reset">Reset view</button><button id="full">⛶</button></div>
+  </div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "../js/vendor/three.module.min.js" } }
+</script>
+<script type="module" src="spatial.js"></script>
+</body>
+</html>
