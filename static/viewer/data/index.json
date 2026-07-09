@@ -1,15 +1,15 @@
 {
  "samples": [
   {
-   "id": "kitchen",
-   "label": "Kitchen \u2014 walking across the room",
-   "file": "kitchen.json",
+   "id": "bedroom",
+   "label": "Bedroom \u2192 hallway (paper figure)",
+   "file": "bedroom.json",
    "pc_kb": 586
   },
   {
-   "id": "turn",
-   "label": "Indoor scene \u2014 walking and turning",
-   "file": "turn.json",
+   "id": "kitchen",
+   "label": "Kitchen \u2014 walking across the room",
+   "file": "kitchen.json",
    "pc_kb": 586
   },
   {

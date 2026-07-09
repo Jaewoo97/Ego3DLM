@@ -43,8 +43,8 @@ SKELETON_PAIRS = [
 # GT motion is natural (near-upright body, feet plant rather than glide) — samples
 # with a large torso lean look weird, so they're excluded.
 SAMPLES = [
+    ('bedroom', 'Bedroom → hallway (paper figure)',       '20230821_s1_william_wilson_act3_gnf0bz/0050.pt'),
     ('kitchen', 'Kitchen — walking across the room',      '20230822_s0_kyle_parker_act2_y3l7lv/0062.pt'),
-    ('turn',    'Indoor scene — walking and turning',      '20230823_s1_alison_riddle_act1_ayav9z/0088.pt'),
     ('living',  'Living room — walking and turning',       '20230817_s0_brittney_powell_act3_1t2she/0050.pt'),
 ]
 
