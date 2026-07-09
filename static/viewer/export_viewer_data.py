@@ -99,13 +99,14 @@ def load_method(folder, rel):
                 ade=float(ades[best]), cot=cot)
 
 
-def align(info, ref):
-    Tp = min(info['gp'].shape[0], ref['gp'].shape[0])
-    Tf = min(info['gf'].shape[0], ref['gf'].shape[0])
-    X = np.concatenate([info['gp'][:Tp].reshape(-1, 3), info['gf'][:Tf].reshape(-1, 3)])
-    Y = np.concatenate([ref['gp'][:Tp].reshape(-1, 3),  ref['gf'][:Tf].reshape(-1, 3)])
-    R, t = kabsch(X, Y)
-    return R, t
+def align_seg(seg_info, seg_ref):
+    """Kabsch aligning ONE segment (past OR future) to the reference's segment.
+    Some methods (e.g. ours_withGRPO) canonicalise each segment separately — both
+    gt_past[0] and gt_future[0] sit at the origin — so past and future must be
+    aligned on their own. A single past+future transform can't fit two
+    independently-centered segments and would misplace the prediction (~1.7 m)."""
+    T = min(seg_info.shape[0], seg_ref.shape[0])
+    return kabsch(seg_info[:T].reshape(-1, 3), seg_ref[:T].reshape(-1, 3))
 
 
 def r3(a):  # round -> nested python lists (mm precision)
@@ -143,13 +144,14 @@ def main():
         methods_out = {}
         for m, mlabel, color in METHODS:
             info = per[m]
-            R, t = align(info, ref)
-            pp = W(apply_rt(info['pp'], R, t))
-            pf = W(apply_rt(info['modes'][info['best']], R, t))
+            Rp, tp = align_seg(info['gp'], ref['gp'])   # align past segment
+            Rf, tf = align_seg(info['gf'], ref['gf'])   # align future segment on its own
+            pp = W(apply_rt(info['pp'], Rp, tp))
+            pf = W(apply_rt(info['modes'][info['best']], Rf, tf))
             entry = dict(label=mlabel, color=color, ade=round(info['ade'], 3),
                          pred_past=r3(pp), pred_future=r3(pf), cot=info['cot'])
             if m == 'ours_withGRPO':
-                entry['pred_future_modes'] = [r3(W(apply_rt(mm, R, t))) for mm in info['modes']]
+                entry['pred_future_modes'] = [r3(W(apply_rt(mm, Rf, tf))) for mm in info['modes']]
             methods_out[m] = entry
 
         # point cloud -> viewer frame, float32 bin
