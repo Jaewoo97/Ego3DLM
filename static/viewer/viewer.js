@@ -100,6 +100,34 @@ function rootLine(seq, colorHex, opacity) {
   return line;
 }
 
+// Persistent faded "ghost" poses that visualise the observed-past motion — a set
+// of sampled skeletons that stay visible so past and future are seen together.
+function buildGhostTrail(poses, bonePairs, colorHex) {
+  const base = new THREE.Color(colorHex), white = new THREE.Color(0xffffff);
+  const nb = bonePairs.length;
+  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.62, depthWrite: false });
+  const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), mat, poses.length * nb);
+  mesh.frustumCulled = false; mesh.renderOrder = 1;
+  const d = new THREE.Object3D(), a = new THREE.Vector3(), b = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3();
+  let inst = 0;
+  for (let p = 0; p < poses.length; p++) {
+    const age = poses.length > 1 ? p / (poses.length - 1) : 1;   // 0 oldest -> 1 newest
+    const col = base.clone().lerp(white, 0.5 * (1 - age));        // older -> fainter
+    const j = poses[p];
+    for (let i = 0; i < nb; i++) {
+      a.fromArray(j[bonePairs[i][0]]); b.fromArray(j[bonePairs[i][1]]);
+      dir.subVectors(b, a); const len = dir.length() || 1e-6; mid.addVectors(a, b).multiplyScalar(0.5);
+      d.position.copy(mid); d.quaternion.setFromUnitVectors(UP, dir.normalize());
+      d.scale.set(BONE_R * 0.7, len, BONE_R * 0.7); d.updateMatrix();
+      mesh.setMatrixAt(inst, d.matrix); mesh.setColorAt(inst, col); inst++;
+    }
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  scene.add(mesh);
+  return mesh;
+}
+
 // ── data loading ────────────────────────────────────────────────────────────
 async function loadIndex() {
   const idx = await (await fetch(DATA + 'index.json')).json();
@@ -117,6 +145,7 @@ function disposeSample() {
     scene.remove(sk.group);
     sk.bones.geometry.dispose(); sk.bones.material.dispose();
     sk.joints.geometry.dispose();
+    if (sk.pastGhost) { scene.remove(sk.pastGhost); sk.pastGhost.geometry.dispose(); sk.pastGhost.material.dispose(); }
     [sk.lineFut, sk.linePast].forEach(l => { if (l) { scene.remove(l); l.geometry.dispose(); l.material.dispose(); } });
   });
   skels = {};
@@ -162,6 +191,9 @@ async function loadSample(id) {
     if (key === GT_KEY) {
       sk.linePast = rootLine(m.gt.past, color, 0.35);
       sk.lineFut = rootLine(meta._gtFwd, color, 0.55);   // full continuous path (past->future)
+      const K = Math.min(9, m.gt.past.length);
+      const gi = Array.from({ length: K }, (_, i) => Math.round(i * (m.gt.past.length - 1) / (K - 1)));
+      sk.pastGhost = buildGhostTrail(gi.map(i => m.gt.past[i]), m.bones, color);
     } else {
       sk.linePast = rootLine(entry.pred_past, color, 0.5);
       sk.lineFut = rootLine(entry.pred_future, color, 0.75);
@@ -220,6 +252,7 @@ function setFrame(t) {
   }
   gt.linePast.visible = !forecast;       // track: observed-past path
   gt.lineFut.visible = forecast;         // forecast: full continuous path
+  if (gt.pastGhost) gt.pastGhost.visible = forecast;   // persistent past-motion ghosts
 
   const futStart = meta._futStart;
   for (const key of Object.keys(meta.methods)) {
