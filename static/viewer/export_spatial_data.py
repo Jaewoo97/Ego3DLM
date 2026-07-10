@@ -1,125 +1,120 @@
 #!/usr/bin/env python3
-"""Export spatial (obstacle) scene-awareness clips for the interactive sector
-viewer in the 'Spatial-Semantic Scene Awareness Data' section.
+"""Export spatial (obstacle) scene-awareness clips for the interactive viewer.
 
-Reproduces parse_obstacle.py's directional cone-casting ON the same 50k-point
-cloud + skeleton we render (so the wedges match the shown scene): per frame,
-free distance in the FRONT / LEFT / RIGHT cones (±60deg, points within ±1 m of
-head height), categorised LOW<1 m / MID 1-3 m / HIGH>=3 m, plus BEST_DIR.
+Accuracy fix: instead of recomputing clearance on the noisy 50k cloud, use the
+OFFICIAL obstacle labels (parse_obstacle.py output, computed on the clean
+voxelized scene) for the per-frame LOW/MID/HIGH clearance and BEST_DIR, and
+orient the cones by the true head facing (from three_points). Samples are chosen
+so the person actually walks (global motion) with a sweeping best-direction.
 
-Samples are the *tracked past* segment of clips whose obstacle labels show varied
-clearance (people navigating open space, not boxed in).
-
+Per frame: ground point, head-facing forward (horizontal, viewer frame),
+category [front,left,right] in {0:LOW,1:MID,2:HIGH}, best in {0:F,1:L,2:R,3:BACK}.
 Outputs into ./spatial:  index.json, <id>.json, <id>.pc.bin (float32 Y-up).
 """
-import os, json
+import os, re, json
 import numpy as np
 import torch
 
-HERE      = os.path.dirname(os.path.abspath(__file__))
-DATA_ROOT = os.path.abspath(os.path.join(HERE, '..', 'ECCV2026', 'qual', 'data'))
-OUT       = os.path.join(HERE, 'spatial')
-FPS       = 10
+HERE       = os.path.dirname(os.path.abspath(__file__))
+DATA_ROOT  = os.path.abspath(os.path.join(HERE, '..', 'ECCV2026', 'qual', 'data'))
+TP_DIR     = os.path.abspath(os.path.join(HERE, '..', 'ECCV2026', 'nymeria_egolm_full_v6_2', 'three_points'))
+OBST_DIR   = '/mnt/jaewoo4tb/yujinbae/EgoVLM-I/obstacle_labels'
+OUT        = os.path.join(HERE, 'spatial')
+FPS        = 10
 
 SKELETON_PAIRS = [
     [0,1],[2,0],[3,2],[4,3],[5,4],[6,5],[7,4],[8,7],[9,8],[10,9],[11,4],
     [12,11],[13,12],[14,13],[15,1],[16,15],[17,16],[18,17],[19,1],[20,19],[21,20],[22,21],
 ]
-# clips with varied clearance in the tracked-past window
+# walking clips with a sweeping best-direction (distinct scenes)
 SAMPLES = [
-    ('hallway', 'Hallway — open path ahead',      '20230829_s1_angel_roberts_act2_zv48bm/0040.pt'),
-    ('choose',  'Living room — choosing a path',   '20230817_s0_brittney_powell_act3_1t2she/0044.pt'),
-    ('doorway', 'Living room — toward the doorway', '20230817_s0_brittney_powell_act3_1t2she/0048.pt'),
+    ('walk',   'Living area — navigating',     '20230829_s1_angel_roberts_act2_zv48bm/0043.pt'),
+    ('choose', 'Room — choosing a path',       '20230803_s1_jennifer_sexton_act3_y5o5bu/0088.pt'),
+    ('hall',   'Hallway — walking through',     '20230803_s0_robert_howard_act4_e29s94/0164.pt'),
 ]
 
 R_UP  = np.array([[1,0,0],[0,0,1],[0,-1,0]], float)   # world +Z up -> viewer +Y up
-UP    = np.array([0,1,0.])
-CONE  = np.cos(np.radians(60.0))
-MAXD  = 5.0
-HEAD_I, RSH_I, LSH_I = 6, 7, 11
+HEAD_I = 6
+LVL = {'LOW': 0, 'MID': 1, 'HIGH': 2}
+BEST = {'FRONT': 0, 'LEFT': 1, 'RIGHT': 2, 'BACK': 3}
 
 
 def _np(x): return x.numpy() if torch.is_tensor(x) else np.asarray(x)
 def _sq(x): x=_np(x); return x[0] if x.ndim==4 else x
-def cat(x):  return 0 if x < 1.0 else (1 if x < 3.0 else 2)     # LOW / MID / HIGH
+def r4(a):  return np.round(a, 4).tolist()
 
 
-def smooth_fwd(gp):
-    """Per-frame heading = smoothed horizontal root velocity (sign-stable),
-    holding the last heading when nearly still. More reliable than a shoulder
-    cross-product, whose front/back sign is ambiguous."""
-    root = gp[:, 0].copy(); root[:, 1] = 0.0
-    vel = np.gradient(root, axis=0); vel[:, 1] = 0.0
-    T = len(vel); out = np.zeros((T, 3)); last = None
-    for t in range(T):
-        w = vel[max(0, t-3):t+4].sum(0); n = np.linalg.norm(w)
-        if n > 0.02: last = w / n
-        out[t] = last if last is not None else np.array([0., 0., 1.])
-    for t in range(T):                       # backfill any leading stills
-        if np.linalg.norm(out[t]) < 1e-6: out[t] = out[max(t-1, 0)]
+def kabsch(X, Y):
+    cx, cy = X.mean(0), Y.mean(0)
+    H = (X - cx).T @ (Y - cy)
+    U, S, Vt = np.linalg.svd(H)
+    d = np.sign(np.linalg.det(Vt.T @ U.T))
+    R = Vt.T @ np.diag([1, 1, d]) @ U.T
+    return R, cy - R @ cx
+
+
+def read_official(data_idx):
+    """Per-frame (cat_front, cat_left, cat_right, best) from the obstacle label file."""
+    txt = open(os.path.join(OBST_DIR, f'{data_idx}.txt')).read()
+    out = []
+    for fr in re.split(r'\[Frame \d+\]', txt)[1:]:
+        m = [re.search(rf'FREE_{k}\s*=\s*(\w+)', fr) for k in ('FRONT', 'LEFT', 'RIGHT')]
+        b = re.search(r'BEST_DIR\s*=\s*(\w+)', fr)
+        if all(m) and b:
+            out.append(([LVL[x.group(1)] for x in m], BEST[b.group(1)]))
     return out
-
-
-def clearance(pc, head, fwd):
-    fwd = fwd.copy(); fwd[1] = 0; fwd /= np.linalg.norm(fwd) + 1e-9
-    right = np.cross(fwd, UP); right /= np.linalg.norm(right) + 1e-9
-    band = np.abs(pc[:, 1] - head[1]) < 1.0                     # ±1 m around head height
-    rel = pc[band] - head; rel[:, 1] = 0.0
-    dist = np.linalg.norm(rel, axis=1)
-    keep = (dist > 0.3) & (dist < MAXD)
-    ru, dd = rel[keep] / dist[keep, None], dist[keep]
-    dirs = {'front': fwd, 'left': -right, 'right': right}
-    free = {}
-    for k, v in dirs.items():
-        dc = np.sort(dd[(ru @ v) > CONE])
-        free[k] = float(dc[4]) if len(dc) >= 5 else MAXD       # 5th-nearest: robust to lone noise points
-    best = max(free, key=free.get)
-    return fwd, right, free, best
-
-
-def r4(a): return np.round(a, 4).tolist()
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
     index = []
     for sid, label, rel in SAMPLES:
-        d = torch.load(os.path.join(DATA_ROOT, 'ours_noGRPO', rel),
-                       map_location='cpu', weights_only=False)
-        gp = _sq(d['gt_past']).astype(float)          # tracked-past segment
+        data_idx = str(torch.load(os.path.join(DATA_ROOT, 'ours_withGRPO', rel),
+                                  map_location='cpu', weights_only=False).get('data_idx'))
+        d = torch.load(os.path.join(DATA_ROOT, 'ours_noGRPO', rel), map_location='cpu', weights_only=False)
+        gp = _sq(d['gt_past']).astype(float)
         pc = _sq(np.asarray(d['pc'], float))
         center = gp[:, 0].mean(0)
-        W = lambda P: (P - center) @ R_UP.T
-        gp, pc = W(gp), W(pc)
-        floor_y = float(np.percentile(gp[:, :, 1], 2))            # ~feet level
+        Wp = lambda P: (P - center) @ R_UP.T          # positions
+        Wd = lambda D: D @ R_UP.T                      # directions
+        gpv, pcv = Wp(gp), Wp(pc)
+        floor_y = float(np.percentile(gpv[:, :, 1], 2))
 
-        headings = smooth_fwd(gp)
+        # head facing from three_points, aligned to this sample's world frame
+        tp = np.load(os.path.join(TP_DIR, f'{data_idx}.npy'))    # (T,3,4,4)
+        T = min(tp.shape[0], gp.shape[0])
+        R_tp, _ = kabsch(tp[:T, 0, :3, 3], gp[:T, HEAD_I])       # head positions align
+        fwd_world = (tp[:T, 0, :3, 2] @ R_tp.T)                  # head Z-axis = facing
+        # resolve sign so facing points along travel
+        vel = np.diff(gp[:T, HEAD_I], axis=0)
+        if np.sum(fwd_world[:-1, :2] * vel[:, :2]) < 0:
+            fwd_world = -fwd_world
+        fwd_v = Wd(fwd_world); fwd_v[:, 1] = 0
+        fwd_v /= (np.linalg.norm(fwd_v, axis=1, keepdims=True) + 1e-9)
+
+        official = read_official(data_idx)
+        T = min(T, len(official), gpv.shape[0])
+
         frames = []
-        for t in range(gp.shape[0]):
-            p = gp[t]; head = p[HEAD_I]
-            fwd, right, free, best = clearance(pc, head, headings[t])
-            ground = [float(head[0]), floor_y, float(head[2])]
+        for t in range(T):
+            head = gpv[t, HEAD_I]
+            cat, best = official[t]
             frames.append(dict(
-                ground=r4(ground),
-                fwd=r4([fwd[0], fwd[2]]), right=r4([right[0], right[2]]),  # horizontal (x,z)
-                free=[round(free['front'],3), round(free['left'],3), round(free['right'],3)],
-                cat=[cat(free['front']), cat(free['left']), cat(free['right'])],
-                best={'front':0,'left':1,'right':2}[best],
+                ground=r4([float(head[0]), floor_y, float(head[2])]),
+                fwd=r4([float(fwd_v[t, 0]), float(fwd_v[t, 2])]),
+                cat=cat, best=best,
             ))
-        pcf = pc.astype(np.float32)
+        pcf = pcv.astype(np.float32)
         pcf.tofile(os.path.join(OUT, f'{sid}.pc.bin'))
-        allj = gp.reshape(-1, 3)
-        meta = dict(id=sid, label=label, fps=FPS, n=int(gp.shape[0]),
-                    n_joints=int(gp.shape[1]), bones=SKELETON_PAIRS,
-                    pose=r4(gp), pc_file=f'{sid}.pc.bin', pc_count=int(pcf.shape[0]),
-                    floor_y=round(floor_y,4),
-                    motion_min=r4(allj.min(0)), motion_max=r4(allj.max(0)),
-                    frames=frames)
+        allj = gpv[:T].reshape(-1, 3)
+        meta = dict(id=sid, label=label, fps=FPS, n=T, n_joints=int(gpv.shape[1]),
+                    bones=SKELETON_PAIRS, pose=r4(gpv[:T]),
+                    pc_file=f'{sid}.pc.bin', pc_count=int(pcf.shape[0]), floor_y=round(floor_y, 4),
+                    motion_min=r4(allj.min(0)), motion_max=r4(allj.max(0)), frames=frames)
         json.dump(meta, open(os.path.join(OUT, f'{sid}.json'), 'w'), separators=(',', ':'))
-        hi = sum(1 for f in frames for c in f['cat'] if c == 2)
+        bd = {k: sum(1 for f in frames if f['best'] == v) for k, v in BEST.items()}
         index.append(dict(id=sid, label=label, file=f'{sid}.json'))
-        print(f'[{sid}] {label}: {gp.shape[0]} frames, HIGH-cells={hi}, '
-              f'json={os.path.getsize(os.path.join(OUT, sid+".json"))//1024}KB')
+        print(f'[{sid}] {label}: {T} frames, disp={np.linalg.norm(gpv[T-1,0]-gpv[0,0]):.1f}m, best-dir {bd}')
 
     json.dump(dict(samples=index), open(os.path.join(OUT, 'index.json'), 'w'), indent=1)
     print('wrote', OUT)

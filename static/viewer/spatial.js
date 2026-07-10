@@ -9,7 +9,8 @@ const BONE_R = 0.02, JOINT_R = 0.028;
 const HALF = THREE.MathUtils.degToRad(60), SEG = 22;   // ±60° sensing cones (front/left/right overlap ~30°)
 const CAT_COL = [0xef4444, 0xf59e0b, 0x22c55e];      // LOW / MID / HIGH
 const CAT_TXT = ['Low', 'Mid', 'High'];
-const DIR_TXT = ['Front', 'Left', 'Right'];
+const CAT_LEN = [0.9, 2.2, 3.8];                     // wedge length per clearance level (m)
+const DIR_TXT = ['Front', 'Left', 'Right', 'Back'];
 
 const stage = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -136,22 +137,24 @@ function setFrame(t) {
   frame = Math.max(0, Math.min(total - 1, Math.round(t)));
   poseSkeleton(meta.pose[frame], meta.bones);
   const f = meta.frames[frame], g = f.ground, gy = g[1] + 0.02;
-  const dirs = [[f.fwd[0], f.fwd[1]], [-f.right[0], -f.right[1]], [f.right[0], f.right[1]]];
+  const fx = f.fwd[0], fz = f.fwd[1];        // head-facing forward (horizontal)
+  const rx = -fz, rz = fx;                    // person's right = cross(fwd, up)
+  const dirs = [[fx, fz], [-rx, -rz], [rx, rz]];     // F, L, R cones oriented by facing
   for (let k = 0; k < 3; k++) {
     const isBest = f.best === k;
     updateWedge(wedges[k], g[0], gy, g[2], dirs[k][0], dirs[k][1],
-                Math.max(f.free[k], 0.25), CAT_COL[f.cat[k]], isBest ? 0.62 : 0.28);
+                CAT_LEN[f.cat[k]], CAT_COL[f.cat[k]], isBest ? 0.62 : 0.3);
     const row = document.querySelector(`.row[data-dir="${k}"]`);
     row.querySelector('.dot').style.background = '#' + CAT_COL[f.cat[k]].toString(16).padStart(6, '0');
     row.querySelector('.lvl').textContent = CAT_TXT[f.cat[k]];
-    row.querySelector('.m').textContent = f.free[k].toFixed(1) + ' m';
+    row.querySelector('.m').textContent = '';
     row.classList.toggle('best', isBest);
   }
-  // best-dir arrow at tip of best wedge
-  const bd = dirs[f.best], br = Math.max(f.free[f.best], 0.25);
-  const bx = g[0] + bd[0] * br, bz = g[2] + bd[1] * br;
-  arrow.position.set(bx, gy + 0.15, bz);
-  arrow.quaternion.setFromUnitVectors(UP, new THREE.Vector3(bd[0], 0, bd[1]).normalize());
+  // best direction (Front / Left / Right / Back) from the official label
+  const bdir = [[fx, fz], [-rx, -rz], [rx, rz], [-fx, -fz]][f.best];
+  const br = f.best === 3 ? 0.9 : CAT_LEN[f.cat[f.best]];
+  arrow.position.set(g[0] + bdir[0] * br, gy + 0.15, g[2] + bdir[1] * br);
+  arrow.quaternion.setFromUnitVectors(UP, new THREE.Vector3(bdir[0], 0, bdir[1]).normalize());
   document.getElementById('best').innerHTML = 'Best direction: <b>' + DIR_TXT[f.best] + '</b>';
   document.getElementById('timeline').value = String(frame);
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
