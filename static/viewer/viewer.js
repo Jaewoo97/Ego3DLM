@@ -6,6 +6,9 @@ import { OrbitControls } from '../js/vendor/OrbitControls.js';
 const DATA = './data/';
 const UP = new THREE.Vector3(0, 1, 0);
 const BONE_R = 0.02, JOINT_R = 0.028, GT_KEY = 'gt';
+const TP_JOINTS = [6, 10, 14];       // head, right hand, left hand — the 3-point tracking input
+const egoVid = document.getElementById('ego-vid');
+const egoWrap = document.getElementById('ego');
 
 // ── three basics ────────────────────────────────────────────────────────────
 const stage = document.getElementById('stage');
@@ -42,6 +45,9 @@ let viewMode = 'forecast'; // 'forecast' | 'track'
 const enabled = {};        // method key -> bool (GT always shown)
 const clock = new THREE.Clock();
 let acc = 0;
+let tpMesh = null;             // 3-point tracking markers (input)
+let egoReady = false;
+const tpDummy = new THREE.Object3D();
 
 // ── skeleton construction ───────────────────────────────────────────────────
 function makeSkeleton(colorHex, nJoints, nBones) {
@@ -150,6 +156,7 @@ function disposeSample() {
   });
   skels = {};
   if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); grid = null; }
+  if (tpMesh) { scene.remove(tpMesh); tpMesh.geometry.dispose(); tpMesh.material.dispose(); tpMesh = null; }
 }
 
 async function loadSample(id) {
@@ -207,6 +214,18 @@ async function loadSample(id) {
   grid.position.y = m.motion_min[1] - 0.05;
   grid.material.transparent = true; grid.material.opacity = 0.35;
   scene.add(grid);
+
+  // 3-point tracking markers (input): head + both hands
+  tpMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 12),
+    new THREE.MeshStandardMaterial({ color: 0xf59e0b }), TP_JOINTS.length);
+  tpMesh.material.emissive = new THREE.Color(0xf59e0b).multiplyScalar(0.35);
+  tpMesh.frustumCulled = false; tpMesh.renderOrder = 3; scene.add(tpMesh);
+
+  // egocentric RGB (input) — per-sample clip, synced to the observed past; hidden if absent
+  egoReady = false; egoWrap.classList.add('hidden');
+  egoVid.onloadeddata = () => { egoReady = true; egoWrap.classList.remove('hidden'); egoVid.pause(); };
+  egoVid.onerror = () => { egoReady = false; egoWrap.classList.add('hidden'); };
+  egoVid.src = 'ego/' + id + '.mp4';
 
   // framing — forecasting plays past -> bridge -> future as one continuous sequence
   total = (viewMode === 'track') ? m.n_past : meta._gtFwd.length;
@@ -272,9 +291,30 @@ function setFrame(t) {
     sk.linePast.visible = on && !forecast;
   }
 
+  // input visualisations: 3-point markers + egocentric RGB during the observed past
+  const nPast = meta.n_past;
+  const inPast = forecast ? (frame < nPast) : (frame < meta.gt.past.length);
+  if (tpMesh) {
+    tpMesh.visible = inPast;
+    if (inPast) {
+      const jp = forecast ? meta._gtFwd[frame] : meta.gt.past[frame];
+      for (let i = 0; i < TP_JOINTS.length; i++) {
+        const j = jp[TP_JOINTS[i]];
+        tpDummy.position.set(j[0], j[1], j[2]); tpDummy.quaternion.identity();
+        tpDummy.scale.setScalar(0.05); tpDummy.updateMatrix(); tpMesh.setMatrixAt(i, tpDummy.matrix);
+      }
+      tpMesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+  if (egoReady) {
+    const ct = Math.min(inPast ? frame : nPast - 1, nPast - 1) / meta.fps;
+    if (Math.abs(egoVid.currentTime - ct) > 0.02) { try { egoVid.currentTime = ct; } catch (e) {} }
+  }
+
   document.getElementById('timeline').value = String(frame);
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
-  document.getElementById('phase').textContent = forecast ? (frame < meta._futStart ? 'observed past' : 'predicting future') : 'tracking past';
+  document.getElementById('phase').textContent =
+    forecast ? (frame < meta._futStart ? 'observed past · input' : 'predicting future · output') : 'tracking past · input';
   updateCot();
 }
 
