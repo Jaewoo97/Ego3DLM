@@ -44,7 +44,7 @@ SKELETON_PAIRS = [
 # with a large torso lean look weird, so they're excluded.
 SAMPLES = [
     ('bedroom', 'Bedroom → hallway (paper figure)',       '20230821_s1_william_wilson_act3_gnf0bz/0050.pt'),
-    ('kitchen', 'Kitchen — walking across the room',      '20230822_s0_kyle_parker_act2_y3l7lv/0062.pt'),
+    ('kitchen', 'Living area — talking then walking',     '20230822_s0_kyle_parker_act2_y3l7lv/0062.pt'),
     ('living',  'Living room — walking and turning',       '20230817_s0_brittney_powell_act3_1t2she/0050.pt'),
 ]
 
@@ -96,7 +96,7 @@ def load_method(folder, rel):
     cot = d.get('cot')
     cot = cot[best] if isinstance(cot, list) and cot else (cot if isinstance(cot, str) else '')
     return dict(gp=gp, gf=gf, pp=pp, modes=modes, best=best, pc=pc,
-                ade=float(ades[best]), cot=cot)
+                ade=float(ades[best]), cot=cot, data_idx=str(d.get('data_idx')))
 
 
 def align_seg(seg_info, seg_ref):
@@ -111,6 +111,17 @@ def align_seg(seg_info, seg_ref):
 
 def r3(a):  # round -> nested python lists (mm precision)
     return np.round(a, 4).tolist()
+
+
+TEXTS_DIR = os.path.abspath(os.path.join(HERE, '..', 'ECCV2026', 'nymeria_egolm_full_v6_2', 'texts'))
+
+
+def gt_narration(data_idx):
+    """Ground-truth motion narration for a sample (texts/<data_idx>.txt)."""
+    p = os.path.join(TEXTS_DIR, f'{data_idx}.txt')
+    if data_idx and os.path.exists(p):
+        return open(p, encoding='utf-8').read().split('#')[0].strip()
+    return ''
 
 
 def main():
@@ -167,6 +178,7 @@ def main():
             n_joints=int(gt_past.shape[1]), bones=SKELETON_PAIRS,
             gt=dict(label='Ground truth', color=GT_COLOR,
                     past=r3(gt_past), bridge=r3(gt_bridge), future=r3(gt_future)),
+            gt_text=gt_narration(per['ours_withGRPO']['data_idx']),
             methods=methods_out,
             pc_file=f'{sid}.pc.bin', pc_count=int(pc.shape[0]),
             person_center=[0, 0, 0],

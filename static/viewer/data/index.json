@@ -8,7 +8,7 @@
   },
   {
    "id": "kitchen",
-   "label": "Kitchen \u2014 walking across the room",
+   "label": "Living area \u2014 talking then walking",
    "file": "kitchen.json",
    "pc_kb": 586
   },

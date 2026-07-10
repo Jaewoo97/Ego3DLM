@@ -213,6 +213,7 @@ async function loadSample(id) {
   frame = 0;
   document.getElementById('timeline').max = String(total - 1);
   document.getElementById('s-label').textContent = m.label;
+  document.getElementById('s-gt').innerHTML = m.gt_text ? '<b>Ground-truth motion:</b> ' + m.gt_text : '';
   buildMethodChips();
   frameCamera();
   setFrame(0);

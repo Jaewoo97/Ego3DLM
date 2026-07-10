@@ -255,6 +255,18 @@
         <figure class="paper-figure" style="max-width: 640px;">
           <img src="static/images/paper/teaser.png" alt="Ego3DLM teaser: given a prompt, three-point tracking, a 3D scene, and 2D egocentric video, a single language model jointly outputs past/future 3D pose and their language descriptions."/>
         </figure>
+
+        <div style="max-width: 720px; margin: 1.5rem auto 0;">
+          <video autoplay loop muted playsinline
+                 style="width:100%; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.10); display:block; background:#f2f3f5;">
+            <source src="static/videos/ego3dlm/teaser_3d.mp4" type="video/mp4">
+          </video>
+          <p style="font-size:0.9rem; color:#666; margin-top:0.5rem; text-align:center;">
+            Forecasting 3D motion in the reconstructed scene: the observed past (grey trail) then the predicted future, with
+            <span style="color:#2a9d54; font-weight:600;">Ours (Ego3DLM)</span> tracking the ground truth out of the bedroom &mdash; explore it interactively below.
+          </p>
+        </div>
+
         <h2 class="subtitle has-text-centered" style="margin-top: 1.2rem;">
           <strong>Ego3DLM</strong> incorporates the semantic context of the surrounding <strong>3D environment</strong> together with 2D egocentric video and three-point tracking to jointly generate <strong>past and future 3D poses</strong> and their corresponding <strong>language motion descriptions</strong> &mdash; all in a single autoregressive pass.
         </h2>

@@ -43,8 +43,9 @@
   /* info overlay */
   #info { position:absolute; left:12px; top:12px; max-width:min(46%,440px);
           background:rgba(255,255,255,.82); backdrop-filter:blur(3px);
-          border:1px solid var(--line); border-radius:10px; padding:11px 13px; font-size:13px; }
+          border:1px solid var(--line); border-radius:10px; padding:11px 13px; font-size:13px; max-height:48%; overflow-y:auto; }
   #info h3 { margin:0 0 4px 0; font-size:14px; }
+  #s-gt { color:#14315e; }
   #info .cot { color:#374151; margin-top:6px; font-size:12.5px; line-height:1.45; }
   #info .cot b { color:var(--accent); }
   #phase { display:inline-block; font-size:11px; padding:1px 8px; border-radius:999px;
@@ -58,6 +59,7 @@
     <div id="loading">Loading scene…</div>
     <div id="info">
       <h3><span id="s-label">—</span><span id="phase">—</span></h3>
+      <div id="s-gt" class="cot"></div>
       <div id="s-cot" class="cot"></div>
     </div>
     <div id="hint">drag to orbit · right-drag to pan · scroll to zoom</div>
