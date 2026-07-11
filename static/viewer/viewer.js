@@ -9,6 +9,7 @@ const BONE_R = 0.02, JOINT_R = 0.028, GT_KEY = 'gt';
 const TP_JOINTS = [6, 10, 14];       // head, right hand, left hand — the 3-point tracking input
 const egoVid = document.getElementById('ego-vid');
 const egoWrap = document.getElementById('ego');
+const LAYER = new URLSearchParams(location.search).get('layer');   // cloud | tp | pose — isolate one layer for panel capture
 
 // ── three basics ────────────────────────────────────────────────────────────
 const stage = document.getElementById('stage');
@@ -256,6 +257,20 @@ function frameCamera() {
 // is no jump across the past->future segment gap. Tracking animates the past.
 // Each skeleton is hidden once its own sequence ends — predictions are never
 // padded to a common length.
+function applyLayer() {   // isolate one layer for teaser-panel capture (?layer=cloud|tp|pose)
+  const cloud = LAYER === 'cloud', tp = LAYER === 'tp', pose = LAYER === 'pose';
+  if (pcObj) pcObj.visible = cloud;
+  if (grid) grid.visible = false;
+  if (tpMesh) tpMesh.visible = tp && tpMesh.visible;
+  for (const key of Object.keys(skels)) {
+    const sk = skels[key];
+    sk.group.visible = pose && (key === GT_KEY || key === 'ours_withGRPO') && sk.group.visible;
+    if (sk.lineFut) sk.lineFut.visible = false;
+    if (sk.linePast) sk.linePast.visible = false;
+    if (sk.pastGhost) sk.pastGhost.visible = false;
+  }
+}
+
 function setFrame(t) {
   frame = Math.max(0, Math.min(total - 1, Math.round(t)));
   const bones = meta.bones;
@@ -315,6 +330,7 @@ function setFrame(t) {
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
   document.getElementById('phase').textContent =
     forecast ? (frame < meta._futStart ? 'observed past · input' : 'predicting future · output') : 'tracking past · input';
+  if (LAYER) applyLayer();
   updateCot();
 }
 

@@ -176,10 +176,31 @@
     /* Links */
     .publication-links .link-block a { margin: 4px; }
 
+    /* Animated teaser diagram (inputs -> LM -> outputs, with videos) */
+    .tdiagram { max-width: 940px; margin: 0 auto; }
+    .trow { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .tpanel { flex: 1 1 170px; max-width: 200px; text-align: center; }
+    .tpanel.out { flex: 1 1 260px; max-width: 280px; }
+    .tlabel { font-size: 0.78rem; font-weight: 700; color: #1f3b73; margin-bottom: 4px; }
+    .tpanel video, .tbox { width: 100%; border: 1px solid #e6e8ec; border-radius: 8px; background: #f2f3f5; display: block; }
+    .tpanel video { aspect-ratio: 1 / 1; object-fit: cover; }
+    .tpanel.out video { aspect-ratio: 1 / 1; }
+    .tprompt { aspect-ratio: 1 / 1; padding: 10px 11px; font-size: 0.74rem; line-height: 1.4; color: #444;
+               display: flex; align-items: center; text-align: left; font-style: italic; }
+    .ttext { font-size: 0.76rem; color: #374151; margin-top: 5px; text-align: left; padding: 6px 9px;
+             background: #f2f6fc; border: 1px solid #e0e8f5; border-radius: 6px; }
+    .tarrows { display: flex; justify-content: center; gap: 10%; color: #b6bcc6; font-size: 1.5rem; line-height: 1; margin: 3px auto 1px; max-width: 800px; }
+    .tarrow { text-align: center; color: #b6bcc6; font-size: 1.6rem; line-height: 1; margin: 1px 0; }
+    .tlm { background: #2b57a5; color: #fff; font-weight: 700; text-align: center; padding: 9px 12px;
+           border-radius: 10px; max-width: 560px; margin: 3px auto; letter-spacing: 0.04em; font-size: 1.02rem;
+           box-shadow: 0 2px 8px rgba(43,87,165,.25); }
+    .tcap { text-align: center; font-size: 0.7rem; color: #8b93a0; text-transform: uppercase; letter-spacing: .05em; margin: 10px 0 2px; }
+
     /* Responsive */
     @media screen and (max-width: 767px) {
       .title.is-1.publication-title { font-size: 23px; }
       .abstract-text { font-size: 1rem; text-align: left; }
+      .tpanel { flex-basis: 44%; }
     }
   </style>
 </head>
@@ -256,20 +277,42 @@
   <section class="hero teaser">
     <div class="container is-max-desktop">
       <div class="hero-body">
-        <figure class="paper-figure" style="max-width: 640px;">
-          <img src="static/images/paper/teaser.png" alt="Ego3DLM teaser: given a prompt, three-point tracking, a 3D scene, and 2D egocentric video, a single language model jointly outputs past/future 3D pose and their language descriptions."/>
-        </figure>
-
-        <div style="max-width: 720px; margin: 1.5rem auto 0;">
-          <video autoplay loop muted playsinline
-                 style="width:100%; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.10); display:block; background:#f2f3f5;">
-            <source src="static/videos/ego3dlm/teaser_3d.mp4" type="video/mp4">
-          </video>
-          <p style="font-size:0.9rem; color:#666; margin-top:0.5rem; text-align:center;">
-            <strong>Inputs</strong> &mdash; egocentric RGB (top-right), 3-point tracking (<span style="color:#c47d00; font-weight:600;">orange</span>), and the 3D scene &mdash;
-            drive the <strong>output</strong>: past &amp; future 3D motion, with <span style="color:#2a9d54; font-weight:600;">Ours (Ego3DLM)</span>
-            tracking the ground truth out of the bedroom. Explore it interactively below.
-          </p>
+        <div class="tdiagram">
+          <div class="tcap">Inputs</div>
+          <div class="trow">
+            <div class="tpanel">
+              <div class="tlabel">Prompt</div>
+              <div class="tbox tprompt">"Perform motion tracking and forecasting from the egocentric video, 3D scene, and three-point tracking."</div>
+            </div>
+            <div class="tpanel">
+              <div class="tlabel">3-point tracking</div>
+              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/tp.mp4" type="video/mp4"></video>
+            </div>
+            <div class="tpanel">
+              <div class="tlabel">3D scene</div>
+              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/scene.mp4" type="video/mp4"></video>
+            </div>
+            <div class="tpanel">
+              <div class="tlabel">Egocentric video</div>
+              <video autoplay loop muted playsinline><source src="static/viewer/ego/bedroom.mp4" type="video/mp4"></video>
+            </div>
+          </div>
+          <div class="tarrows"><span>&darr;</span><span>&darr;</span><span>&darr;</span><span>&darr;</span></div>
+          <div class="tlm">Language Model</div>
+          <div class="tarrow">&darr;</div>
+          <div class="tcap">Outputs</div>
+          <div class="trow">
+            <div class="tpanel out">
+              <div class="tlabel">Tracking &middot; past motion &amp; narration</div>
+              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/past.mp4" type="video/mp4"></video>
+              <div class="ttext">"C is walking across the bedroom, turns to the left&hellip;"</div>
+            </div>
+            <div class="tpanel out">
+              <div class="tlabel">Forecasting &middot; future motion &amp; description</div>
+              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/future.mp4" type="video/mp4"></video>
+              <div class="ttext">"&hellip;walks out of the bedroom and into the hallway, and then turns to the left."</div>
+            </div>
+          </div>
         </div>
 
         <h2 class="subtitle has-text-centered" style="margin-top: 1.2rem;">
