@@ -128,17 +128,20 @@ def gt_narration(data_idx):
 
 
 def head_forward(ref_gp, data_idx):
-    """Per-past-frame head facing (in the reference raw world frame) from the
-    egocentric three-point tracking: the head's local Z-axis (three_points col 2),
-    Kabsch-aligned to the GT head trajectory and sign-resolved by travel direction.
-    Lightly smoothed over time so a camera driven by it doesn't jitter."""
+    """Per-past-frame egocentric camera optical axis (in the reference raw world
+    frame) from the three-point head pose. The head's local **X-axis (column 0)**
+    is the camera-forward / look direction — it is ~horizontal and tracks travel
+    (cos≈0.93); column 2 is the head's up axis (points up), and column 1 is
+    lateral. Kabsch-aligned to the GT head trajectory, sign-resolved by travel so
+    it points forward, lightly smoothed so the camera doesn't jitter. The natural
+    ~10° downward pitch is kept so the scene view matches what the ego camera sees."""
     p = os.path.join(TP_DIR, f'{data_idx}.npy')
     if not (data_idx and os.path.exists(p)):
         return None
     tp = np.load(p)                              # (T,3,4,4): point 0 = head
     T = min(tp.shape[0], ref_gp.shape[0])
     R_tp, _ = kabsch(tp[:T, 0, :3, 3], ref_gp[:T, HEAD_I])
-    fwd = tp[:T, 0, :3, 2] @ R_tp.T              # head Z-axis -> facing
+    fwd = tp[:T, 0, :3, 0] @ R_tp.T              # head X-axis = camera optical axis
     vel = np.diff(ref_gp[:T, HEAD_I], axis=0)
     if np.sum(fwd[:-1, :2] * vel[:, :2]) < 0:    # point it along travel
         fwd = -fwd
@@ -183,10 +186,9 @@ def main():
         head_cam = None
         if fwd_raw is not None:
             Tc = min(fwd_raw.shape[0], gt_past.shape[0])
-            fwd_v = fwd_raw @ R_UP.T                       # direction -> viewer frame
-            fwd_v[:, 1] = 0.0                              # yaw only: the head Z-axis
-            fwd_v /= (np.linalg.norm(fwd_v, axis=1, keepdims=True) + 1e-9)  # tilts up, so
-            head_cam = [dict(p=r3(gt_past[t, HEAD_I]),     # keep the horizontal facing
+            fwd_v = fwd_raw @ R_UP.T                       # optical axis -> viewer frame
+            fwd_v /= (np.linalg.norm(fwd_v, axis=1, keepdims=True) + 1e-9)  # (pitch kept)
+            head_cam = [dict(p=r3(gt_past[t, HEAD_I]),
                              f=r3(fwd_v[t])) for t in range(Tc)]
 
         methods_out = {}
