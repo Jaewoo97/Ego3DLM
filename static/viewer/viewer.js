@@ -9,7 +9,11 @@ const BONE_R = 0.02, JOINT_R = 0.028, GT_KEY = 'gt';
 const TP_JOINTS = [6, 10, 14];       // head, right hand, left hand — the 3-point tracking input
 const egoVid = document.getElementById('ego-vid');
 const egoWrap = document.getElementById('ego');
-const LAYER = new URLSearchParams(location.search).get('layer');   // cloud | tp | pose — isolate one layer for panel capture
+const params = new URLSearchParams(location.search);
+const LAYER = params.get('layer');   // cloud | tp | pose — isolate one layer for panel capture
+const CAM = params.get('cam');       // 'head' — render the scene from the wearer's viewpoint
+const HB = parseFloat(params.get('back') || '0.35');   // camera set-back behind the eyes (m)
+const HR = parseFloat(params.get('rise') || '0.12');   // camera lift above the eyes (m)
 
 // ── three basics ────────────────────────────────────────────────────────────
 const stage = document.getElementById('stage');
@@ -47,6 +51,8 @@ const enabled = {};        // method key -> bool (GT always shown)
 const clock = new THREE.Clock();
 let acc = 0;
 let tpMesh = null;             // 3-point tracking markers (input)
+let tpTrails = null;           // 3-point tracking trajectories (head + both hands)
+let headCam = false;           // drive the camera from the wearer's head pose
 let egoReady = false;
 const tpDummy = new THREE.Object3D();
 
@@ -158,6 +164,7 @@ function disposeSample() {
   skels = {};
   if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); grid = null; }
   if (tpMesh) { scene.remove(tpMesh); tpMesh.geometry.dispose(); tpMesh.material.dispose(); tpMesh = null; }
+  if (tpTrails) { tpTrails.forEach(l => { scene.remove(l); l.geometry.dispose(); l.material.dispose(); }); tpTrails = null; }
 }
 
 async function loadSample(id) {
@@ -222,6 +229,22 @@ async function loadSample(id) {
   tpMesh.material.emissive = new THREE.Color(0xf59e0b).multiplyScalar(0.35);
   tpMesh.frustumCulled = false; tpMesh.renderOrder = 3; scene.add(tpMesh);
 
+  // 3-point tracking trails: head + both hands trajectories over the past, drawn
+  // progressively (setDrawRange grows with the frame) to emphasise the input.
+  tpTrails = TP_JOINTS.map((j) => {
+    const g = new THREE.BufferGeometry();
+    const pos = new Float32Array(m.n_past * 3);
+    for (let t = 0; t < m.n_past; t++) {
+      const jt = m.gt.past[t][j];
+      pos[t * 3] = jt[0]; pos[t * 3 + 1] = jt[1]; pos[t * 3 + 2] = jt[2];
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setDrawRange(0, 1);
+    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.9 }));
+    line.frustumCulled = false; line.renderOrder = 2; line.visible = false; scene.add(line);
+    return line;
+  });
+
   // egocentric RGB (input) — per-sample clip, synced to the observed past; hidden if absent
   egoReady = false; egoWrap.classList.add('hidden');
   egoVid.onloadeddata = () => { egoReady = true; egoWrap.classList.remove('hidden'); egoVid.pause(); };
@@ -231,6 +254,12 @@ async function loadSample(id) {
   // framing — forecasting plays past -> bridge -> future as one continuous sequence
   total = (viewMode === 'track') ? m.n_past : meta._gtFwd.length;
   frame = 0;
+  headCam = (CAM === 'head' && Array.isArray(meta.head_cam) && meta.head_cam.length > 0);
+  if (headCam) {                          // egocentric viewpoint for the scene panel
+    camera.fov = parseFloat(params.get('fov') || '80');
+    camera.updateProjectionMatrix();
+    controls.enabled = false;
+  }
   document.getElementById('timeline').max = String(total - 1);
   document.getElementById('s-label').textContent = m.label;
   document.getElementById('s-gt').innerHTML = m.gt_text ? '<b>Ground-truth motion:</b> ' + m.gt_text : '';
@@ -241,6 +270,7 @@ async function loadSample(id) {
 }
 
 function frameCamera() {
+  if (headCam) return;                    // head-follow camera owns the view
   const mn = meta.motion_min, mx = meta.motion_max;
   const c = new THREE.Vector3((mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2);
   const size = Math.max(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2], 1.5);
@@ -249,6 +279,22 @@ function frameCamera() {
   camera.position.copy(c).add(new THREE.Vector3(0.75, 0.55, 1).normalize().multiplyScalar(dist));
   camera.updateProjectionMatrix();
   controls.update();
+}
+
+// Egocentric head camera: look from just behind/above the wearer's eyes along the
+// (smoothed, horizontal) head facing, so the scene panel matches the ego video.
+const _eye = new THREE.Vector3(), _fwd = new THREE.Vector3(), _tgt = new THREE.Vector3();
+function applyHeadCam(fr) {
+  const hc = meta.head_cam; if (!hc || !hc.length) return;
+  const i = Math.max(0, Math.min(hc.length - 1, fr));
+  const p = hc[i].p, f = hc[i].f;
+  _fwd.set(f[0], f[1], f[2]).normalize();
+  _tgt.set(p[0], p[1], p[2]).addScaledVector(_fwd, 3.0);   // look ahead along facing
+  _eye.set(p[0], p[1], p[2]).addScaledVector(_fwd, -HB);   // set back behind the eyes
+  _eye.y += HR;                                            // and slightly above
+  camera.up.set(0, 1, 0);
+  camera.position.copy(_eye);
+  camera.lookAt(_tgt);
 }
 
 // ── per-frame pose update ───────────────────────────────────────────────────
@@ -262,9 +308,11 @@ function applyLayer() {   // isolate one layer for teaser-panel capture (?layer=
   if (pcObj) pcObj.visible = cloud;
   if (grid) grid.visible = false;
   if (tpMesh) tpMesh.visible = tp && tpMesh.visible;
+  if (tpTrails) tpTrails.forEach(l => l.visible = tp && l.visible);   // trails ride with the tp layer
   for (const key of Object.keys(skels)) {
     const sk = skels[key];
-    sk.group.visible = pose && (key === GT_KEY || key === 'ours_withGRPO') && sk.group.visible;
+    // tp layer shows the GT pose alongside the tracked points; pose layer shows GT + ours
+    sk.group.visible = ((pose && (key === GT_KEY || key === 'ours_withGRPO')) || (tp && key === GT_KEY)) && sk.group.visible;
     if (sk.lineFut) sk.lineFut.visible = false;
     if (sk.linePast) sk.linePast.visible = false;
     if (sk.pastGhost) sk.pastGhost.visible = false;
@@ -321,6 +369,10 @@ function setFrame(t) {
       tpMesh.instanceMatrix.needsUpdate = true;
     }
   }
+  if (tpTrails) {                          // grow the head/hand trails up to the current past frame
+    const kk = Math.max(1, Math.min(meta.n_past, frame + 1));
+    for (const ln of tpTrails) { ln.visible = inPast; ln.geometry.setDrawRange(0, kk); }
+  }
   if (egoReady) {
     const ct = Math.min(inPast ? frame : nPast - 1, nPast - 1) / meta.fps;
     if (Math.abs(egoVid.currentTime - ct) > 0.02) { try { egoVid.currentTime = ct; } catch (e) {} }
@@ -330,6 +382,7 @@ function setFrame(t) {
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
   document.getElementById('phase').textContent =
     forecast ? (frame < meta._futStart ? 'observed past · input' : 'predicting future · output') : 'tracking past · input';
+  if (headCam) applyHeadCam(frame);
   if (LAYER) applyLayer();
   updateCot();
 }
@@ -371,7 +424,7 @@ function animate() {
     acc += dt * meta.fps * speed;
     if (acc >= 1) { const step = Math.floor(acc); acc -= step; setFrame((frame + step) % total); }
   }
-  controls.update();
+  if (!headCam) controls.update();        // head-follow camera sets the view itself
   renderer.render(scene, camera);
 }
 

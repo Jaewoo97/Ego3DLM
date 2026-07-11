@@ -22,12 +22,13 @@ REFERENCE  = 'ours_noGRPO'          # holds the real point cloud
 FPS        = 10
 
 # method key -> (label, hex color).  GT handled separately.
+# Baselines are trimmed to EgoLM only (per request); the other rows are our own
+# variants/ablations. FICTION and UniEgoMotion .pt dumps still exist on disk but
+# are intentionally not published to the viewer.
 METHODS = [
     ('ours_withGRPO', 'Ours (Ego3DLM)',  '#33b864'),
     ('ours_noGRPO',   'Ours (no GRPO)',  '#3b82f6'),
     ('ours_no3d',     'Ours (no 3D)',    '#a855f7'),
-    ('fiction',       'FICTION',         '#f59e0b'),
-    ('uniegomotion',  'UniEgoMotion',    '#ec4899'),
     ('egolm',         'EgoLM',           '#ef4444'),
 ]
 GT_COLOR = '#8b9198'
@@ -114,6 +115,8 @@ def r3(a):  # round -> nested python lists (mm precision)
 
 
 TEXTS_DIR = os.path.abspath(os.path.join(HERE, '..', 'ECCV2026', 'nymeria_egolm_full_v6_2', 'texts'))
+TP_DIR    = os.path.abspath(os.path.join(HERE, '..', 'ECCV2026', 'nymeria_egolm_full_v6_2', 'three_points'))
+HEAD_I    = 6                       # head joint (= TP_JOINTS[0] in the viewer)
 
 
 def gt_narration(data_idx):
@@ -122,6 +125,26 @@ def gt_narration(data_idx):
     if data_idx and os.path.exists(p):
         return open(p, encoding='utf-8').read().split('#')[0].strip()
     return ''
+
+
+def head_forward(ref_gp, data_idx):
+    """Per-past-frame head facing (in the reference raw world frame) from the
+    egocentric three-point tracking: the head's local Z-axis (three_points col 2),
+    Kabsch-aligned to the GT head trajectory and sign-resolved by travel direction.
+    Lightly smoothed over time so a camera driven by it doesn't jitter."""
+    p = os.path.join(TP_DIR, f'{data_idx}.npy')
+    if not (data_idx and os.path.exists(p)):
+        return None
+    tp = np.load(p)                              # (T,3,4,4): point 0 = head
+    T = min(tp.shape[0], ref_gp.shape[0])
+    R_tp, _ = kabsch(tp[:T, 0, :3, 3], ref_gp[:T, HEAD_I])
+    fwd = tp[:T, 0, :3, 2] @ R_tp.T              # head Z-axis -> facing
+    vel = np.diff(ref_gp[:T, HEAD_I], axis=0)
+    if np.sum(fwd[:-1, :2] * vel[:, :2]) < 0:    # point it along travel
+        fwd = -fwd
+    k = 5                                         # box-smooth to steady the camera
+    pad = np.pad(fwd, ((k // 2, k // 2), (0, 0)), mode='edge')
+    return np.stack([pad[i:i + k].mean(0) for i in range(T)])
 
 
 def main():
@@ -152,6 +175,20 @@ def main():
         gt_bridge = np.stack([A * (1 - ss((i + 1) / (n_bridge + 1))) +
                               Bf * ss((i + 1) / (n_bridge + 1)) for i in range(n_bridge)])
 
+        # egocentric head camera: per-past-frame eye position (GT head, viewer
+        # frame) + facing (three-point head Z-axis -> viewer frame). Lets the
+        # scene panel be rendered from the wearer's viewpoint, so it lines up
+        # with the egocentric video.
+        fwd_raw = head_forward(ref['gp'], per['ours_withGRPO']['data_idx'])
+        head_cam = None
+        if fwd_raw is not None:
+            Tc = min(fwd_raw.shape[0], gt_past.shape[0])
+            fwd_v = fwd_raw @ R_UP.T                       # direction -> viewer frame
+            fwd_v[:, 1] = 0.0                              # yaw only: the head Z-axis
+            fwd_v /= (np.linalg.norm(fwd_v, axis=1, keepdims=True) + 1e-9)  # tilts up, so
+            head_cam = [dict(p=r3(gt_past[t, HEAD_I]),     # keep the horizontal facing
+                             f=r3(fwd_v[t])) for t in range(Tc)]
+
         methods_out = {}
         for m, mlabel, color in METHODS:
             info = per[m]
@@ -179,6 +216,7 @@ def main():
             gt=dict(label='Ground truth', color=GT_COLOR,
                     past=r3(gt_past), bridge=r3(gt_bridge), future=r3(gt_future)),
             gt_text=gt_narration(per['ours_withGRPO']['data_idx']),
+            head_cam=head_cam,
             methods=methods_out,
             pc_file=f'{sid}.pc.bin', pc_count=int(pc.shape[0]),
             person_center=[0, 0, 0],
