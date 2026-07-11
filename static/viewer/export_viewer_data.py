@@ -120,11 +120,31 @@ HEAD_I    = 6                       # head joint (= TP_JOINTS[0] in the viewer)
 
 
 def gt_narration(data_idx):
-    """Ground-truth motion narration for a sample (texts/<data_idx>.txt)."""
+    """Ground-truth motion narration for one segment (texts/<data_idx>.txt).
+    The dataset annotates EACH segment with its own full sentence; the past and
+    the future are consecutive segments, so each has its own complete narration
+    (they must NOT be treated as two halves of one sentence)."""
     p = os.path.join(TEXTS_DIR, f'{data_idx}.txt')
     if data_idx and os.path.exists(p):
         return open(p, encoding='utf-8').read().split('#')[0].strip()
     return ''
+
+
+def future_data_idx(ref_gf, past_idx):
+    """data_idx of the FUTURE segment = the next segment (past_idx+1), verified by
+    Kabsch-matching gt_future's head to that segment's three-point head."""
+    try:
+        cand = f'{int(past_idx) + 1:06d}'
+    except (TypeError, ValueError):
+        return None
+    p = os.path.join(TP_DIR, f'{cand}.npy')
+    if not os.path.exists(p):
+        return None
+    tp = np.load(p)[:, 0, :3, 3]
+    T = min(tp.shape[0], ref_gf.shape[0])
+    R, t = kabsch(tp[:T], ref_gf[:T, HEAD_I])
+    resid = np.linalg.norm((tp[:T] @ R.T + t) - ref_gf[:T, HEAD_I], axis=1).mean()
+    return cand if resid < 0.1 else None
 
 
 def head_forward(ref_gp, data_idx):
@@ -218,6 +238,7 @@ def main():
             gt=dict(label='Ground truth', color=GT_COLOR,
                     past=r3(gt_past), bridge=r3(gt_bridge), future=r3(gt_future)),
             gt_text=gt_narration(per['ours_withGRPO']['data_idx']),
+            gt_text_future=gt_narration(future_data_idx(ref['gf'], per['ours_withGRPO']['data_idx'])),
             head_cam=head_cam,
             methods=methods_out,
             pc_file=f'{sid}.pc.bin', pc_count=int(pc.shape[0]),

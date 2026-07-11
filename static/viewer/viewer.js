@@ -14,6 +14,8 @@ const LAYER = params.get('layer');   // cloud | tp | pose — isolate one layer 
 const CAM = params.get('cam');       // 'head' — render the scene from the wearer's viewpoint
 const HB = parseFloat(params.get('back') || '0.35');   // camera set-back behind the eyes (m)
 const HR = parseFloat(params.get('rise') || '0.12');   // camera lift above the eyes (m)
+const GTCOL = params.get('gtcol');     // teaser capture: override GT skeleton colour (hex, no #)
+const PREDCOL = params.get('predcol'); // teaser capture: override Ours prediction colour
 
 // ── three basics ────────────────────────────────────────────────────────────
 const stage = document.getElementById('stage');
@@ -173,6 +175,8 @@ async function loadSample(id) {
   const buf = await (await fetch(DATA + m.pc_file)).arrayBuffer();
   disposeSample();
   meta = m;
+  if (GTCOL) m.gt.color = '#' + GTCOL;                                  // teaser color overrides
+  if (PREDCOL && m.methods.ours_withGRPO) m.methods.ours_withGRPO.color = '#' + PREDCOL;
   // continuous forecast sequence: observed past -> eased bridge -> future
   meta._gtFwd = [...m.gt.past, ...(m.gt.bridge || []), ...m.gt.future];
   meta._futStart = m.n_past + (m.n_bridge || 0);
@@ -262,7 +266,6 @@ async function loadSample(id) {
   }
   document.getElementById('timeline').max = String(total - 1);
   document.getElementById('s-label').textContent = m.label;
-  document.getElementById('s-gt').innerHTML = m.gt_text ? '<b>Ground-truth motion:</b> ' + m.gt_text : '';
   buildMethodChips();
   frameCamera();
   setFrame(0);
@@ -382,6 +385,11 @@ function setFrame(t) {
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
   document.getElementById('phase').textContent =
     forecast ? (frame < meta._futStart ? 'observed past · input' : 'predicting future · output') : 'tracking past · input';
+  // GT narration follows the phase — past and future are separate annotated segments
+  const inFut = forecast && frame >= meta._futStart;
+  const gtxt = inFut ? (meta.gt_text_future || '') : (meta.gt_text || '');
+  document.getElementById('s-gt').innerHTML =
+    gtxt ? '<b>Ground-truth ' + (inFut ? 'future' : 'past') + ' motion:</b> ' + gtxt : '';
   if (headCam) applyHeadCam(frame);
   if (LAYER) applyLayer();
   updateCot();
