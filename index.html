@@ -286,15 +286,15 @@
             </div>
             <div class="tpanel">
               <div class="tlabel">3-point tracking</div>
-              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/tp.mp4" type="video/mp4"></video>
+              <video autoplay loop muted playsinline data-sync="in"><source src="static/videos/ego3dlm/panels/tp.mp4" type="video/mp4"></video>
             </div>
             <div class="tpanel">
               <div class="tlabel">3D scene</div>
-              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/scene.mp4" type="video/mp4"></video>
+              <video autoplay loop muted playsinline data-sync="in"><source src="static/videos/ego3dlm/panels/scene.mp4" type="video/mp4"></video>
             </div>
             <div class="tpanel">
               <div class="tlabel">Egocentric video</div>
-              <video autoplay loop muted playsinline><source src="static/viewer/ego/bedroom.mp4" type="video/mp4"></video>
+              <video autoplay loop muted playsinline data-sync="in"><source src="static/videos/ego3dlm/panels/ego.mp4" type="video/mp4"></video>
             </div>
           </div>
           <div class="tarrows"><span>&darr;</span><span>&darr;</span><span>&darr;</span><span>&darr;</span></div>
@@ -304,12 +304,12 @@
           <div class="trow">
             <div class="tpanel out">
               <div class="tlabel">Tracking &middot; past motion &amp; narration</div>
-              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/past.mp4" type="video/mp4"></video>
+              <video autoplay loop muted playsinline data-sync="out"><source src="static/videos/ego3dlm/panels/past.mp4" type="video/mp4"></video>
               <div class="ttext">"C is walking across the bedroom, turns to the left&hellip;"</div>
             </div>
             <div class="tpanel out">
               <div class="tlabel">Forecasting &middot; future motion &amp; description</div>
-              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/future.mp4" type="video/mp4"></video>
+              <video autoplay loop muted playsinline data-sync="out"><source src="static/videos/ego3dlm/panels/future.mp4" type="video/mp4"></video>
               <div class="ttext">"&hellip;walks out of the bedroom and into the hallway, and then turns to the left."</div>
             </div>
           </div>
@@ -668,5 +668,47 @@
   referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
   <!-- End of Statcounter Code -->
   
+<script>
+/* Teaser diagram: keep each row's modality videos frame-synced and looping
+   together. They share a duration (4.9 s), so we drive them off one virtual
+   clock, correcting any playback drift and re-aligning the loop. */
+(function () {
+  function lockGroup(vids) {
+    if (vids.length < 2) return;
+    var t0 = null, dur = 0, seen = 0;
+    function begin() {
+      dur = Math.min.apply(null, vids.map(function (v) { return v.duration || 0; }));
+      if (!dur || !isFinite(dur)) return;
+      t0 = performance.now();
+      vids.forEach(function (v) { try { v.currentTime = 0; } catch (e) {} v.play().catch(function () {}); });
+      requestAnimationFrame(tick);
+    }
+    function tick() {
+      if (t0 !== null && dur > 0) {
+        var vt = ((performance.now() - t0) / 1000) % dur;
+        vids.forEach(function (v) {
+          var d = v.currentTime - vt;
+          if (d > dur / 2) d -= dur; else if (d < -dur / 2) d += dur;   // wrap-aware
+          if (Math.abs(d) > 0.12) { try { v.currentTime = vt; } catch (e) {} }
+          if (v.paused) v.play().catch(function () {});
+        });
+      }
+      requestAnimationFrame(tick);
+    }
+    vids.forEach(function (v) {
+      v.loop = true;
+      if (v.readyState >= 1) { if (++seen === vids.length) begin(); }
+      else v.addEventListener('loadedmetadata', function () { if (++seen === vids.length) begin(); }, { once: true });
+    });
+  }
+  function run() {
+    ['in', 'out'].forEach(function (g) {
+      lockGroup(Array.prototype.slice.call(document.querySelectorAll('.tdiagram video[data-sync="' + g + '"]')));
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
+</script>
 </body>
 </html>
