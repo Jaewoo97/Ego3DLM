@@ -17,9 +17,12 @@ const HR = parseFloat(params.get('rise') || '0.12');   // camera lift above the 
 const GTCOL = params.get('gtcol');     // teaser capture: override GT skeleton colour (hex, no #)
 const PREDCOL = params.get('predcol'); // teaser capture: override Ours prediction colour
 const DASH = params.get('dash');       // tp panel: render the pose as dashed lines
-const TRAIL = params.get('trail');     // output panels: sparse dim onion-skin of earlier poses
+const TRAIL = params.get('trail');     // output panels: sparse persistent static pose traces
+const PASTTRACE = params.get('pasttrace'); // future panel: static grey traces of the PAST motion
+const TRAJ = params.get('traj');       // future panel: show root trajectory lines
 const ZOOM = parseFloat(params.get('zoom') || '1');   // camera distance scale (<1 = closer)
 const FRAMESEG = params.get('frameseg');              // 'past' | 'future' — frame that segment
+const TRACESEG = params.get('traceseg') || FRAMESEG || 'past';  // segment the GT static trace samples
 
 // ── three basics ────────────────────────────────────────────────────────────
 const stage = document.getElementById('stage');
@@ -59,6 +62,7 @@ let acc = 0;
 let tpMesh = null;             // 3-point tracking markers (input)
 let tpTrails = null;           // 3-point tracking trajectories (head + both hands)
 let gtDash = null;             // dashed-line GT pose (tp panel: de-emphasise the body)
+let pastTrace = null;          // static grey traces of the past motion (future panel context)
 let headCam = false;           // drive the camera from the wearer's head pose
 let egoReady = false;
 const tpDummy = new THREE.Object3D();
@@ -122,10 +126,10 @@ function rootLine(seq, colorHex, opacity) {
 
 // Persistent faded "ghost" poses that visualise the observed-past motion — a set
 // of sampled skeletons that stay visible so past and future are seen together.
-function buildGhostTrail(poses, bonePairs, colorHex) {
+function buildGhostTrail(poses, bonePairs, colorHex, opacity = 0.62) {
   const base = new THREE.Color(colorHex), white = new THREE.Color(0xffffff);
   const nb = bonePairs.length;
-  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.62, depthWrite: false });
+  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity, depthWrite: false });
   const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), mat, poses.length * nb);
   mesh.frustumCulled = false; mesh.renderOrder = 1;
   const d = new THREE.Object3D(), a = new THREE.Vector3(), b = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3();
@@ -170,40 +174,15 @@ function updateDash(ls, joints, bonePairs) {
   ls.computeLineDistances();               // required for the dash pattern
 }
 
-// Onion-skin motion trail — at the current frame, draw a few EARLIER poses of the
-// same sequence, sparsely spaced and fading toward the background, so the output
-// panels convey the temporal flow without clutter.
-const TRAIL_K = 3, TRAIL_STEP = 6, BG = new THREE.Color(0xf2f3f5);
-function makeTrail(nBones, color) {
-  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, depthWrite: false });
-  const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6), mat, TRAIL_K * nBones);
-  mesh.frustumCulled = false; mesh.renderOrder = 0; mesh.visible = false;
-  mesh.userData.color = (color && color.isColor) ? color.clone() : new THREE.Color(color);
-  scene.add(mesh);
-  return mesh;
-}
-function updateTrail(mesh, seq, curIdx, bonePairs) {
-  const base = mesh.userData.color, nb = bonePairs.length;
-  const d = new THREE.Object3D(), a = new THREE.Vector3(), b = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3();
-  let inst = 0, any = false;
-  for (let k = 0; k < TRAIL_K; k++) {
-    const idx = curIdx - (k + 1) * TRAIL_STEP;
-    const has = idx >= 0 && idx < seq.length;
-    const col = base.clone().lerp(BG, 0.4 + 0.5 * (k / Math.max(1, TRAIL_K - 1)));   // older -> fades
-    for (let i = 0; i < nb; i++) {
-      if (has) {
-        const j = seq[idx];
-        a.fromArray(j[bonePairs[i][0]]); b.fromArray(j[bonePairs[i][1]]);
-        dir.subVectors(b, a); const len = dir.length() || 1e-6; mid.addVectors(a, b).multiplyScalar(0.5);
-        d.position.copy(mid); d.quaternion.setFromUnitVectors(UP, dir.normalize());
-        d.scale.set(BONE_R * 0.55, len, BONE_R * 0.55); any = true;
-      } else { d.position.set(0, -9999, 0); d.scale.setScalar(1e-6); }
-      d.updateMatrix(); mesh.setMatrixAt(inst, d.matrix); mesh.setColorAt(inst, col); inst++;
-    }
-  }
-  mesh.instanceMatrix.needsUpdate = true;
-  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  mesh.visible = any;
+// Static motion trace — a sparse, persistent set of poses sampled across a whole
+// sequence (dim, older→fainter). Unlike a moving trail these stay fixed, so the
+// output panels show the motion's path as steady ghosts.
+function buildStaticTrace(seq, bonePairs, colorHex, K, opacity) {
+  K = Math.min(K || 7, seq.length);
+  if (K < 1) return null;
+  const idx = K === 1 ? [seq.length - 1]
+    : Array.from({ length: K }, (_, i) => Math.round(i * (seq.length - 1) / (K - 1)));
+  return buildGhostTrail(idx.map(i => seq[i]), bonePairs, colorHex, opacity);
 }
 
 // ── data loading ────────────────────────────────────────────────────────────
@@ -224,7 +203,7 @@ function disposeSample() {
     sk.bones.geometry.dispose(); sk.bones.material.dispose();
     sk.joints.geometry.dispose();
     if (sk.pastGhost) { scene.remove(sk.pastGhost); sk.pastGhost.geometry.dispose(); sk.pastGhost.material.dispose(); }
-    if (sk.trail) { scene.remove(sk.trail); sk.trail.geometry.dispose(); sk.trail.material.dispose(); }
+    if (sk.statTrace) { scene.remove(sk.statTrace); sk.statTrace.geometry.dispose(); sk.statTrace.material.dispose(); }
     [sk.lineFut, sk.linePast].forEach(l => { if (l) { scene.remove(l); l.geometry.dispose(); l.material.dispose(); } });
   });
   skels = {};
@@ -232,6 +211,7 @@ function disposeSample() {
   if (tpMesh) { scene.remove(tpMesh); tpMesh.geometry.dispose(); tpMesh.material.dispose(); tpMesh = null; }
   if (tpTrails) { tpTrails.forEach(l => { scene.remove(l); l.geometry.dispose(); l.material.dispose(); }); tpTrails = null; }
   if (gtDash) { scene.remove(gtDash); gtDash.geometry.dispose(); gtDash.material.dispose(); gtDash = null; }
+  if (pastTrace) { scene.remove(pastTrace); pastTrace.geometry.dispose(); pastTrace.material.dispose(); pastTrace = null; }
 }
 
 async function loadSample(id) {
@@ -287,8 +267,14 @@ async function loadSample(id) {
 
   // teaser capture extras (inert in the normal viewer)
   if (DASH) gtDash = makeDashSkeleton(m.bones.length, m.gt.color);
-  if (TRAIL) for (const key of [GT_KEY, 'ours_withGRPO'])
-    if (skels[key]) skels[key].trail = makeTrail(m.bones.length, skels[key].color);
+  const _hex = c => '#' + c.getHexString();
+  if (TRAIL) {   // static pose traces of the animating skeleton on the traced segment
+    const gseq = (TRACESEG === 'future') ? m.gt.future : m.gt.past;
+    skels[GT_KEY].statTrace = buildStaticTrace(gseq, m.bones, _hex(skels[GT_KEY].color), 7, 0.5);
+    if (TRACESEG === 'future' && skels.ours_withGRPO)   // prediction trace only on the future panel
+      skels.ours_withGRPO.statTrace = buildStaticTrace(m.methods.ours_withGRPO.pred_future, m.bones, _hex(skels.ours_withGRPO.color), 7, 0.5);
+  }
+  if (PASTTRACE) pastTrace = buildStaticTrace(m.gt.past, m.bones, '#aab0b8', 6, 0.5);   // past-motion context
 
   // faint floor grid at ~feet level
   const span = Math.max(...['0', '2'].map(i => m.motion_max[+i] - m.motion_min[+i]), 6) + 6;
@@ -392,14 +378,16 @@ function applyLayer() {   // isolate one layer for teaser-panel capture (?layer=
   if (gtDash) gtDash.visible = tp && gtDash.visible;                  // dashed pose rides with the tp layer
   for (const key of Object.keys(skels)) {
     const sk = skels[key];
+    const isOut = (key === GT_KEY || key === 'ours_withGRPO');
     // tp layer shows the GT pose alongside the tracked points (dashed when DASH is set);
-    // pose layer shows GT + ours
-    sk.group.visible = ((pose && (key === GT_KEY || key === 'ours_withGRPO')) ||
-                        (tp && !DASH && key === GT_KEY)) && sk.group.visible;
-    if (sk.lineFut) sk.lineFut.visible = false;
+    // pose layer shows GT + ours, plus their static traces and (optionally) trajectory
+    sk.group.visible = ((pose && isOut) || (tp && !DASH && key === GT_KEY)) && sk.group.visible;
+    if (sk.statTrace) sk.statTrace.visible = pose && isOut;          // static pose traces
+    if (sk.lineFut) sk.lineFut.visible = pose && !!TRAJ && isOut;    // root trajectory
     if (sk.linePast) sk.linePast.visible = false;
     if (sk.pastGhost) sk.pastGhost.visible = false;
   }
+  if (pastTrace) pastTrace.visible = pose;                          // past-motion context (future panel)
 }
 
 function setFrame(t) {
@@ -419,7 +407,6 @@ function setFrame(t) {
   gt.linePast.visible = !forecast;       // track: observed-past path
   gt.lineFut.visible = forecast;         // forecast: full continuous path
   if (gt.pastGhost) gt.pastGhost.visible = forecast;   // persistent past-motion ghosts
-  if (TRAIL && gt.trail) { if (forecast) updateTrail(gt.trail, meta._gtFwd, frame, bones); else gt.trail.visible = false; }
 
   const futStart = meta._futStart;
   for (const key of Object.keys(meta.methods)) {
@@ -434,10 +421,6 @@ function setFrame(t) {
     }
     sk.group.visible = show;
     if (show) poseSkeleton(sk, joints, bones);
-    if (TRAIL && sk.trail) {
-      if (show && forecast && frame >= futStart) updateTrail(sk.trail, meta.methods[key].pred_future, frame - futStart, bones);
-      else sk.trail.visible = false;
-    }
     sk.lineFut.visible = on && forecast;
     sk.linePast.visible = on && !forecast;
   }
