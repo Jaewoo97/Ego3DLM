@@ -340,10 +340,12 @@ async function loadSample(id) {
       skels.ours_withGRPO.statTrace = buildStaticTrace(m.methods.ours_withGRPO.pred_future, m.bones, _hex(skels.ours_withGRPO.color), 7, 0.5);
   }
   if (PASTTRACE) pastTrace = buildStaticTrace(m.gt.past, m.bones, '#aab0b8', 6, 0.5);   // past-motion context
-  if (TRAJ) {   // future-ONLY root trajectory tubes on the FLOOR (distinct from the upright poses), progressive
+  if (TRAJ) {   // root trajectory tube on the FLOOR (distinct from upright poses), drawn progressively;
+    // follows the traced segment: past panel -> gt.past (slate), future panel -> prediction (green)
     const floorY = m.motion_min[1] + 0.02;
-    if (!PREDONLY) futTrajGt = makeTrajSeg(m.gt.future, _hex(skels[GT_KEY].color), 0.025, floorY);
-    if (skels.ours_withGRPO)
+    const gseq = (TRACESEG === 'future') ? m.gt.future : m.gt.past;
+    if (!PREDONLY) futTrajGt = makeTrajSeg(gseq, _hex(skels[GT_KEY].color), 0.025, floorY);
+    if (TRACESEG === 'future' && skels.ours_withGRPO)
       futTrajPred = makeTrajSeg(m.methods.ours_withGRPO.pred_future, _hex(skels.ours_withGRPO.color), 0.025, floorY);
   }
 
@@ -542,11 +544,12 @@ function setFrame(t) {
   const gtxt = inFut ? (meta.gt_text_future || '') : (meta.gt_text || '');
   document.getElementById('s-gt').innerHTML =
     gtxt ? '<b>Ground-truth ' + (inFut ? 'future' : 'past') + ' motion:</b> ' + gtxt : '';
-  if (TRAJ) {   // future trajectory tube draws only up to the current future timestep
-    const inFut = forecast && frame >= meta._futStart;
-    const fi = inFut ? (frame - meta._futStart) : 0;   // number of future segments reached
-    if (futTrajGt) { if (inFut) growTrajSeg(futTrajGt, fi); else futTrajGt.visible = false; }
-    if (futTrajPred) { if (inFut) growTrajSeg(futTrajPred, fi); else futTrajPred.visible = false; }
+  if (TRAJ) {   // trajectory tube draws only up to the current timestep of its segment
+    const isFut = (TRACESEG === 'future');
+    const active = isFut ? (forecast && frame >= meta._futStart) : (forecast && frame < meta.n_past);
+    const seg = isFut ? (frame - meta._futStart) : frame;   // segments reached in that segment
+    if (futTrajGt) { if (active) growTrajSeg(futTrajGt, seg); else futTrajGt.visible = false; }
+    if (futTrajPred) { if (active) growTrajSeg(futTrajPred, seg); else futTrajPred.visible = false; }
   }
   if (headCam) applyHeadCam(frame);
   if (LAYER) applyLayer();
