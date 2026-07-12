@@ -20,6 +20,7 @@ const DASH = params.get('dash');       // tp panel: render the pose as dashed li
 const TRAIL = params.get('trail');     // output panels: sparse persistent static pose traces
 const PASTTRACE = params.get('pasttrace'); // future panel: static grey traces of the PAST motion
 const TRAJ = params.get('traj');       // future panel: show root trajectory lines
+const PREDONLY = params.get('predonly'); // future panel: show only the prediction, hide GT
 const ZOOM = parseFloat(params.get('zoom') || '1');   // camera distance scale (<1 = closer)
 const FRAMESEG = params.get('frameseg');              // 'past' | 'future' — frame that segment
 const TRACESEG = params.get('traceseg') || FRAMESEG || 'past';  // segment the GT static trace samples
@@ -334,14 +335,14 @@ async function loadSample(id) {
   const _hex = c => '#' + c.getHexString();
   if (TRAIL) {   // static pose traces of the animating skeleton on the traced segment
     const gseq = (TRACESEG === 'future') ? m.gt.future : m.gt.past;
-    skels[GT_KEY].statTrace = buildStaticTrace(gseq, m.bones, _hex(skels[GT_KEY].color), 7, 0.5);
+    if (!PREDONLY) skels[GT_KEY].statTrace = buildStaticTrace(gseq, m.bones, _hex(skels[GT_KEY].color), 7, 0.5);
     if (TRACESEG === 'future' && skels.ours_withGRPO)   // prediction trace only on the future panel
       skels.ours_withGRPO.statTrace = buildStaticTrace(m.methods.ours_withGRPO.pred_future, m.bones, _hex(skels.ours_withGRPO.color), 7, 0.5);
   }
   if (PASTTRACE) pastTrace = buildStaticTrace(m.gt.past, m.bones, '#aab0b8', 6, 0.5);   // past-motion context
   if (TRAJ) {   // future-ONLY root trajectory tubes on the FLOOR (distinct from the upright poses), progressive
     const floorY = m.motion_min[1] + 0.02;
-    futTrajGt = makeTrajSeg(m.gt.future, _hex(skels[GT_KEY].color), 0.025, floorY);
+    if (!PREDONLY) futTrajGt = makeTrajSeg(m.gt.future, _hex(skels[GT_KEY].color), 0.025, floorY);
     if (skels.ours_withGRPO)
       futTrajPred = makeTrajSeg(m.methods.ours_withGRPO.pred_future, _hex(skels.ours_withGRPO.color), 0.025, floorY);
   }
@@ -450,8 +451,9 @@ function applyLayer() {   // isolate one layer for teaser-panel capture (?layer=
     const sk = skels[key];
     const isOut = (key === GT_KEY || key === 'ours_withGRPO');
     // tp layer shows the GT pose alongside the tracked points (dashed when DASH is set);
-    // pose layer shows GT + ours as solid skeletons
-    sk.group.visible = ((pose && isOut) || (tp && !DASH && key === GT_KEY)) && sk.group.visible;
+    // pose layer shows GT + ours as solid skeletons (GT hidden when PREDONLY)
+    sk.group.visible = ((pose && isOut && !(PREDONLY && key === GT_KEY)) ||
+                        (tp && !DASH && key === GT_KEY)) && sk.group.visible;
     if (sk.statTrace) sk.statTrace.visible = pose && isOut;          // static pose traces
     if (sk.lineFut) sk.lineFut.visible = false;                     // (future-only traj handled below)
     if (sk.linePast) sk.linePast.visible = false;
