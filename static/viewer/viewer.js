@@ -221,8 +221,8 @@ function revealTrace(mesh, cur) {   // show only ghosts whose source frame has b
 // lines can't be widened and vanish at panel scale; the vendored three build has no
 // TubeGeometry). Segments are precomputed and revealed progressively so only the
 // future timesteps reached are drawn.
-function makeTrajSeg(seq, colorHex, radius) {
-  const pts = seq.map(p => p[0]);            // root joint path
+function makeTrajSeg(seq, colorHex, radius, floorY) {
+  const pts = seq.map(p => floorY == null ? p[0] : [p[0][0], floorY, p[0][2]]);   // root path (floor-projected)
   const n = Math.max(0, pts.length - 1);
   const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6),
     new THREE.MeshBasicMaterial({ color: new THREE.Color(colorHex), transparent: true, opacity: 0.95 }), n || 1);
@@ -339,10 +339,11 @@ async function loadSample(id) {
       skels.ours_withGRPO.statTrace = buildStaticTrace(m.methods.ours_withGRPO.pred_future, m.bones, _hex(skels.ours_withGRPO.color), 7, 0.5);
   }
   if (PASTTRACE) pastTrace = buildStaticTrace(m.gt.past, m.bones, '#aab0b8', 6, 0.5);   // past-motion context
-  if (TRAJ) {   // future-ONLY root trajectory tubes (no past portion), drawn progressively
-    futTrajGt = makeTrajSeg(m.gt.future, _hex(skels[GT_KEY].color), 0.022);
+  if (TRAJ) {   // future-ONLY root trajectory tubes on the FLOOR (distinct from the upright poses), progressive
+    const floorY = m.motion_min[1] + 0.02;
+    futTrajGt = makeTrajSeg(m.gt.future, _hex(skels[GT_KEY].color), 0.025, floorY);
     if (skels.ours_withGRPO)
-      futTrajPred = makeTrajSeg(m.methods.ours_withGRPO.pred_future, _hex(skels.ours_withGRPO.color), 0.022);
+      futTrajPred = makeTrajSeg(m.methods.ours_withGRPO.pred_future, _hex(skels.ours_withGRPO.color), 0.025, floorY);
   }
 
   // faint floor grid at ~feet level
@@ -449,9 +450,8 @@ function applyLayer() {   // isolate one layer for teaser-panel capture (?layer=
     const sk = skels[key];
     const isOut = (key === GT_KEY || key === 'ours_withGRPO');
     // tp layer shows the GT pose alongside the tracked points (dashed when DASH is set);
-    // pose layer shows GT + ours as solid skeletons — EXCEPT the future/traj panel, which
-    // represents the future motion by its trajectory only (no solid future poses)
-    sk.group.visible = ((pose && isOut && !TRAJ) || (tp && !DASH && key === GT_KEY)) && sk.group.visible;
+    // pose layer shows GT + ours as solid skeletons
+    sk.group.visible = ((pose && isOut) || (tp && !DASH && key === GT_KEY)) && sk.group.visible;
     if (sk.statTrace) sk.statTrace.visible = pose && isOut;          // static pose traces
     if (sk.lineFut) sk.lineFut.visible = false;                     // (future-only traj handled below)
     if (sk.linePast) sk.linePast.visible = false;
@@ -479,7 +479,11 @@ function setFrame(t) {
   gt.linePast.visible = !forecast;       // track: observed-past path
   gt.lineFut.visible = forecast;         // forecast: full continuous path
   if (gt.pastGhost) gt.pastGhost.visible = forecast;   // persistent past-motion ghosts
-  if (TRAIL && gt.statTrace) revealTrace(gt.statTrace, frame);   // reveal each past trace as its time passes
+  if (TRAIL) {   // reveal each pose trace once its own timestep passes (past index, or future index)
+    const rev = (TRACESEG === 'future') ? (frame - meta._futStart) : frame;
+    if (gt.statTrace) revealTrace(gt.statTrace, rev);
+    if (skels.ours_withGRPO && skels.ours_withGRPO.statTrace) revealTrace(skels.ours_withGRPO.statTrace, rev);
+  }
 
   const futStart = meta._futStart;
   for (const key of Object.keys(meta.methods)) {
