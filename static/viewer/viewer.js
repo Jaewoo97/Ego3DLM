@@ -63,6 +63,7 @@ let tpMesh = null;             // 3-point tracking markers (input)
 let tpTrails = null;           // 3-point tracking trajectories (head + both hands)
 let gtDash = null;             // dashed-line GT pose (tp panel: de-emphasise the body)
 let pastTrace = null;          // static grey traces of the past motion (future panel context)
+let futTrajGt = null, futTrajPred = null;   // future-only root trajectories, revealed progressively
 let headCam = false;           // drive the camera from the wearer's head pose
 let egoReady = false;
 const tpDummy = new THREE.Object3D();
@@ -174,15 +175,76 @@ function updateDash(ls, joints, bonePairs) {
   ls.computeLineDistances();               // required for the dash pattern
 }
 
-// Static motion trace — a sparse, persistent set of poses sampled across a whole
-// sequence (dim, older→fainter). Unlike a moving trail these stay fixed, so the
-// output panels show the motion's path as steady ghosts.
+// Static motion trace — a sparse, fixed set of poses sampled across a sequence
+// (dim, older→fainter). Each ghost stores its source frame so it can be revealed
+// progressively (visible only once playback passes that timestep) via revealTrace;
+// left alone it stays fully visible.
+const ZERO_MAT = new THREE.Matrix4().makeScale(0, 0, 0);
 function buildStaticTrace(seq, bonePairs, colorHex, K, opacity) {
   K = Math.min(K || 7, seq.length);
   if (K < 1) return null;
-  const idx = K === 1 ? [seq.length - 1]
+  const frames = K === 1 ? [seq.length - 1]
     : Array.from({ length: K }, (_, i) => Math.round(i * (seq.length - 1) / (K - 1)));
-  return buildGhostTrail(idx.map(i => seq[i]), bonePairs, colorHex, opacity);
+  const nb = bonePairs.length, base = new THREE.Color(colorHex), white = new THREE.Color(0xffffff);
+  const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: opacity == null ? 0.5 : opacity, depthWrite: false }), K * nb);
+  mesh.frustumCulled = false; mesh.renderOrder = 1;
+  const d = new THREE.Object3D(), a = new THREE.Vector3(), b = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3();
+  const mats = [], gframe = [];
+  let inst = 0;
+  for (let k = 0; k < K; k++) {
+    const age = K > 1 ? k / (K - 1) : 1;
+    const col = base.clone().lerp(white, 0.5 * (1 - age));   // earlier -> fainter
+    const j = seq[frames[k]];
+    for (let i = 0; i < nb; i++) {
+      a.fromArray(j[bonePairs[i][0]]); b.fromArray(j[bonePairs[i][1]]);
+      dir.subVectors(b, a); const len = dir.length() || 1e-6; mid.addVectors(a, b).multiplyScalar(0.5);
+      d.position.copy(mid); d.quaternion.setFromUnitVectors(UP, dir.normalize());
+      d.scale.set(BONE_R * 0.7, len, BONE_R * 0.7); d.updateMatrix();
+      const m = d.matrix.clone(); mats.push(m); gframe.push(frames[k]);
+      mesh.setMatrixAt(inst, m); mesh.setColorAt(inst, col); inst++;
+    }
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.userData = { mats, gframe };
+  scene.add(mesh);
+  return mesh;
+}
+function revealTrace(mesh, cur) {   // show only ghosts whose source frame has been reached
+  const { mats, gframe } = mesh.userData;
+  for (let i = 0; i < mats.length; i++) mesh.setMatrixAt(i, gframe[i] <= cur ? mats[i] : ZERO_MAT);
+  mesh.instanceMatrix.needsUpdate = true;
+}
+
+// Root trajectory rendered as a thin tube built from cylinder segments (plain-WebGL
+// lines can't be widened and vanish at panel scale; the vendored three build has no
+// TubeGeometry). Segments are precomputed and revealed progressively so only the
+// future timesteps reached are drawn.
+function makeTrajSeg(seq, colorHex, radius) {
+  const pts = seq.map(p => p[0]);            // root joint path
+  const n = Math.max(0, pts.length - 1);
+  const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(colorHex), transparent: true, opacity: 0.95 }), n || 1);
+  mesh.frustumCulled = false; mesh.renderOrder = 3; mesh.visible = false;
+  const d = new THREE.Object3D(), a = new THREE.Vector3(), b = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3();
+  const mats = [];
+  for (let i = 0; i < n; i++) {
+    a.set(pts[i][0], pts[i][1], pts[i][2]); b.set(pts[i + 1][0], pts[i + 1][1], pts[i + 1][2]);
+    dir.subVectors(b, a); const len = dir.length() || 1e-6; mid.addVectors(a, b).multiplyScalar(0.5);
+    d.position.copy(mid); d.quaternion.setFromUnitVectors(UP, dir.normalize()); d.scale.set(radius, len, radius); d.updateMatrix();
+    mats.push(d.matrix.clone()); mesh.setMatrixAt(i, ZERO_MAT);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.userData = { mats };
+  scene.add(mesh);
+  return mesh;
+}
+function growTrajSeg(mesh, n) {   // reveal the first n segments
+  const { mats } = mesh.userData;
+  for (let i = 0; i < mats.length; i++) mesh.setMatrixAt(i, i < n ? mats[i] : ZERO_MAT);
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.visible = n > 0;
 }
 
 // ── data loading ────────────────────────────────────────────────────────────
@@ -212,6 +274,8 @@ function disposeSample() {
   if (tpTrails) { tpTrails.forEach(l => { scene.remove(l); l.geometry.dispose(); l.material.dispose(); }); tpTrails = null; }
   if (gtDash) { scene.remove(gtDash); gtDash.geometry.dispose(); gtDash.material.dispose(); gtDash = null; }
   if (pastTrace) { scene.remove(pastTrace); pastTrace.geometry.dispose(); pastTrace.material.dispose(); pastTrace = null; }
+  [futTrajGt, futTrajPred].forEach(l => { if (l) { scene.remove(l); l.geometry.dispose(); l.material.dispose(); } });
+  futTrajGt = futTrajPred = null;
 }
 
 async function loadSample(id) {
@@ -275,6 +339,11 @@ async function loadSample(id) {
       skels.ours_withGRPO.statTrace = buildStaticTrace(m.methods.ours_withGRPO.pred_future, m.bones, _hex(skels.ours_withGRPO.color), 7, 0.5);
   }
   if (PASTTRACE) pastTrace = buildStaticTrace(m.gt.past, m.bones, '#aab0b8', 6, 0.5);   // past-motion context
+  if (TRAJ) {   // future-ONLY root trajectory tubes (no past portion), drawn progressively
+    futTrajGt = makeTrajSeg(m.gt.future, _hex(skels[GT_KEY].color), 0.022);
+    if (skels.ours_withGRPO)
+      futTrajPred = makeTrajSeg(m.methods.ours_withGRPO.pred_future, _hex(skels.ours_withGRPO.color), 0.022);
+  }
 
   // faint floor grid at ~feet level
   const span = Math.max(...['0', '2'].map(i => m.motion_max[+i] - m.motion_min[+i]), 6) + 6;
@@ -380,14 +449,17 @@ function applyLayer() {   // isolate one layer for teaser-panel capture (?layer=
     const sk = skels[key];
     const isOut = (key === GT_KEY || key === 'ours_withGRPO');
     // tp layer shows the GT pose alongside the tracked points (dashed when DASH is set);
-    // pose layer shows GT + ours, plus their static traces and (optionally) trajectory
-    sk.group.visible = ((pose && isOut) || (tp && !DASH && key === GT_KEY)) && sk.group.visible;
+    // pose layer shows GT + ours as solid skeletons — EXCEPT the future/traj panel, which
+    // represents the future motion by its trajectory only (no solid future poses)
+    sk.group.visible = ((pose && isOut && !TRAJ) || (tp && !DASH && key === GT_KEY)) && sk.group.visible;
     if (sk.statTrace) sk.statTrace.visible = pose && isOut;          // static pose traces
-    if (sk.lineFut) sk.lineFut.visible = pose && !!TRAJ && isOut;    // root trajectory
+    if (sk.lineFut) sk.lineFut.visible = false;                     // (future-only traj handled below)
     if (sk.linePast) sk.linePast.visible = false;
     if (sk.pastGhost) sk.pastGhost.visible = false;
   }
   if (pastTrace) pastTrace.visible = pose;                          // past-motion context (future panel)
+  if (futTrajGt) futTrajGt.visible = pose && futTrajGt.visible;     // future-only root trajectory
+  if (futTrajPred) futTrajPred.visible = pose && futTrajPred.visible;
 }
 
 function setFrame(t) {
@@ -407,6 +479,7 @@ function setFrame(t) {
   gt.linePast.visible = !forecast;       // track: observed-past path
   gt.lineFut.visible = forecast;         // forecast: full continuous path
   if (gt.pastGhost) gt.pastGhost.visible = forecast;   // persistent past-motion ghosts
+  if (TRAIL && gt.statTrace) revealTrace(gt.statTrace, frame);   // reveal each past trace as its time passes
 
   const futStart = meta._futStart;
   for (const key of Object.keys(meta.methods)) {
@@ -463,6 +536,12 @@ function setFrame(t) {
   const gtxt = inFut ? (meta.gt_text_future || '') : (meta.gt_text || '');
   document.getElementById('s-gt').innerHTML =
     gtxt ? '<b>Ground-truth ' + (inFut ? 'future' : 'past') + ' motion:</b> ' + gtxt : '';
+  if (TRAJ) {   // future trajectory tube draws only up to the current future timestep
+    const inFut = forecast && frame >= meta._futStart;
+    const fi = inFut ? (frame - meta._futStart) : 0;   // number of future segments reached
+    if (futTrajGt) { if (inFut) growTrajSeg(futTrajGt, fi); else futTrajGt.visible = false; }
+    if (futTrajPred) { if (inFut) growTrajSeg(futTrajPred, fi); else futTrajPred.visible = false; }
+  }
   if (headCam) applyHeadCam(frame);
   if (LAYER) applyLayer();
   updateCot();
