@@ -196,6 +196,31 @@
            box-shadow: 0 2px 8px rgba(43,87,165,.25); }
     .tcap { text-align: center; font-size: 0.7rem; color: #8b93a0; text-transform: uppercase; letter-spacing: .05em; margin: 10px 0 2px; }
 
+    /* Stage illustrations */
+    .stage-head { display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 0.35rem; }
+    .stage-badge { display: inline-block; background: #5b7fbf; color: #fff; font-weight: 700; font-size: 0.78rem;
+                   letter-spacing: 0.07em; text-transform: uppercase; padding: 4px 13px; border-radius: 999px; }
+    .sdiag { max-width: 940px; margin: 1.4rem auto 0.6rem; }
+    .srow { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; }
+    .scol { display: flex; flex-direction: column; gap: 9px; }
+    .sbox { background: #fff; border: 1px solid #e6e8ec; border-radius: 10px; padding: 11px 14px; text-align: center;
+            font-size: 0.9rem; color: #374151; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .sbox .sh { display: block; font-weight: 700; color: #1f3b73; font-size: 0.8rem; text-transform: uppercase;
+                letter-spacing: 0.03em; margin-bottom: 4px; }
+    .sbox small { color: #6b7280; font-size: 0.78rem; }
+    .slm { background: #2b57a5; color: #fff; border: none; box-shadow: 0 2px 8px rgba(43,87,165,.25); }
+    .slm .sh { color: #dfe7f5; }
+    .sarrow { color: #b6bcc6; font-size: 1.5rem; line-height: 1; flex: 0 0 auto; }
+    .seq { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 2px; }
+    .seq .sarrow { font-size: 1.05rem; }
+    .stok { border-radius: 8px; padding: 8px 11px; font-size: 0.8rem; font-weight: 600; color: #fff; text-align: center; }
+    .stok small { display: block; color: rgba(255,255,255,.82); font-weight: 500; font-size: 0.68rem; }
+    .qa { background: #f2f6fc; border: 1px solid #e0e8f5; border-radius: 8px; padding: 7px 10px; font-size: 0.79rem;
+          color: #374151; text-align: left; }
+    .qa b { color: #1f3b73; }
+    .rchip { display: inline-block; border-radius: 999px; padding: 4px 11px; font-size: 0.79rem; font-weight: 600;
+             margin: 3px; border: 1px solid; }
+
     /* Responsive */
     @media screen and (max-width: 767px) {
       .title.is-1.publication-title { font-size: 23px; }
@@ -375,37 +400,45 @@
           </figcaption>
         </figure>
 
-        <!-- Three stages -->
-        <div class="card-row">
-          <div class="idea-card stage-card">
-            <span class="stage-tag">Stage I</span>
-            <h4>Spatial-Semantic Scene Awareness Pretraining</h4>
-            <p>The LM is pretrained on automatically generated spatial and semantic QA pairs from 3D scenes, instilling obstacle awareness and object-level semantics before any motion reasoning.</p>
-          </div>
-          <div class="idea-card stage-card">
-            <span class="stage-tag">Stage II</span>
-            <h4>Multi-Modal Multi-Task Instruction Tuning</h4>
-            <p>A single autoregressive sequence &mdash; <em>spatial scene description &rarr; past &amp; future motion &rarr; past &amp; future descriptions</em> &mdash; propagates spatial reasoning through pose into language.</p>
-          </div>
-          <div class="idea-card stage-card">
-            <span class="stage-tag">Stage III</span>
-            <h4>Multi-Modal Reward GRPO</h4>
-            <p>Reinforcement finetuning with intra-modal (JPE, BLEU) and inter-modal (motion&ndash;description matching) rewards directly optimizes accuracy and cross-modal fidelity.</p>
-          </div>
-        </div>
+        <p class="section-subheading" style="margin-top:1rem;">
+          The three training stages are detailed below.
+        </p>
       </div>
     </div>
   </section>
 
-  <!-- ============================ QA DATASET ============================ -->
+  <!-- ============================ STAGE I ============================ -->
   <section class="hero is-small data-section">
     <div class="hero-body">
       <div class="container">
-        <h2 class="title is-3 section-heading">Spatial-Semantic Scene Awareness Data</h2>
+        <div class="stage-head"><span class="stage-badge">Stage I</span></div>
+        <h2 class="title is-3 section-heading" style="margin-top:0;">Spatial-Semantic Scene Awareness Pretraining</h2>
         <p class="section-subheading">
-          To ground the language model in the 3D environment, we automatically construct a scene-awareness QA dataset
-          &mdash; approximately <strong>535K spatial</strong> and <strong>115K semantic</strong> QA pairs across <strong>208 scenes</strong> &mdash;
-          augmenting Nymeria, which lacks explicit scene descriptions.
+          Before any motion reasoning, we ground the language model in the 3D environment &mdash; pretraining on automatically
+          generated <strong>spatial</strong> and <strong>semantic</strong> question&ndash;answer pairs so it acquires obstacle
+          awareness and object-level semantics.
+        </p>
+
+        <!-- Stage I illustration -->
+        <div class="sdiag">
+          <div class="srow">
+            <div class="sbox"><span class="sh">3D Scene</span>point cloud<br>+ egocentric video</div>
+            <span class="sarrow">&rarr;</span>
+            <div class="scol">
+              <div class="sbox" style="padding:9px 12px;"><span class="sh" style="color:#2b57a5;">Semantic QA</span>
+                <div class="qa"><b>Q:</b> What is on the desk? &nbsp;&middot;&nbsp; <b>A:</b> A monitor</div></div>
+              <div class="sbox" style="padding:9px 12px;"><span class="sh" style="color:#2b57a5;">Spatial QA</span>
+                <div class="qa"><b>Q:</b> Most navigable direction? &nbsp;&middot;&nbsp; <b>A:</b> Right &mdash; front blocked</div></div>
+            </div>
+            <span class="sarrow">&rarr;</span>
+            <div class="sbox slm"><span class="sh">Scene-aware LM</span>obstacle awareness<br>+ object semantics</div>
+          </div>
+        </div>
+
+        <p class="section-subheading">
+          We automatically construct the scene-awareness QA dataset &mdash; approximately <strong>535K spatial</strong> and
+          <strong>115K semantic</strong> QA pairs across <strong>208 scenes</strong> &mdash; augmenting Nymeria, which lacks
+          explicit scene descriptions.
         </p>
         <figure class="paper-figure" style="max-width: 1080px;">
           <img src="static/images/paper/data_generation.png" alt="Spatial-semantic scene awareness QA dataset generation: semantic awareness QA types on the left and spatial awareness directional clearance on the right."/>
@@ -450,6 +483,83 @@
             <span>Open spatial viewer in full screen</span>
           </a>
         </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ STAGE II ============================ -->
+  <section class="hero is-small method-section">
+    <div class="hero-body">
+      <div class="container">
+        <div class="stage-head"><span class="stage-badge">Stage II</span></div>
+        <h2 class="title is-3 section-heading" style="margin-top:0;">Multi-Modal Multi-Task Instruction Tuning</h2>
+        <p class="section-subheading">
+          The scene-aware model is instruction-tuned to generate <strong>all four outputs in a single autoregressive pass</strong>.
+          An explicit spatial-reasoning step is prepended, so spatial understanding propagates through pose prediction and into
+          language &mdash; jointly enforcing spatial, temporal, and semantic consistency.
+        </p>
+        <div class="sdiag">
+          <div class="srow" style="margin-bottom:12px;">
+            <div class="sbox"><span class="sh">Inputs</span>3-point tracking &middot;<br>3D scene &middot; egocentric video</div>
+            <span class="sarrow">&rarr;</span>
+            <div class="sbox slm"><span class="sh">Ego3DLM</span>single<br>autoregressive pass</div>
+          </div>
+          <div class="tcap">Structured output sequence &mdash; one pass</div>
+          <div class="seq">
+            <div class="stok" style="background:#2b57a5;">Scene<br>reasoning</div>
+            <span class="sarrow">&rarr;</span>
+            <div class="stok" style="background:#64748b;">Past pose<small>tracking</small></div>
+            <span class="sarrow">&rarr;</span>
+            <div class="stok" style="background:#16a34a;">Future pose<small>forecast</small></div>
+            <span class="sarrow">&rarr;</span>
+            <div class="stok" style="background:#d97706;">Past<br>narration</div>
+            <span class="sarrow">&rarr;</span>
+            <div class="stok" style="background:#d97706;">Future<br>description</div>
+          </div>
+          <p class="tcap" style="text-transform:none; color:#8b93a0; margin-top:9px;">
+            <span style="color:#64748b;">&#9632;</span> past &amp; <span style="color:#16a34a;">&#9632;</span> future motion,
+            <span style="color:#d97706;">&#9632;</span> narration &mdash; predicted jointly, so pose and language stay mutually consistent.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ STAGE III ============================ -->
+  <section class="hero is-small data-section">
+    <div class="hero-body">
+      <div class="container">
+        <div class="stage-head"><span class="stage-badge">Stage III</span></div>
+        <h2 class="title is-3 section-heading" style="margin-top:0;">Multi-Modal Reward GRPO</h2>
+        <p class="section-subheading">
+          A reinforcement stage &mdash; Group Relative Policy Optimization &mdash; directly optimizes what likelihood training
+          cannot: the <strong>cross-modal coherence</strong> between the simultaneously generated poses and descriptions.
+        </p>
+        <div class="sdiag">
+          <div class="srow">
+            <div class="sbox slm"><span class="sh">Ego3DLM</span>policy</div>
+            <span class="sarrow">&rarr;</span>
+            <div class="scol">
+              <div class="tcap" style="margin:0 0 3px;">Sample G outputs</div>
+              <div class="sbox">o<sub>1</sub>, o<sub>2</sub>, &hellip;, o<sub>G</sub><br><small>poses + descriptions</small></div>
+            </div>
+            <span class="sarrow">&rarr;</span>
+            <div class="scol">
+              <div class="tcap" style="margin:0 0 3px;">Multi-modal reward</div>
+              <div class="sbox" style="padding:10px 12px; max-width:200px;">
+                <span class="rchip" style="color:#15803d; border-color:#86efac; background:#f0fdf4;">motion &middot; 1&minus;JPE</span>
+                <span class="rchip" style="color:#b45309; border-color:#fcd34d; background:#fffbeb;">text &middot; BLEU</span>
+                <span class="rchip" style="color:#7c3aed; border-color:#ddd6fe; background:#f5f3ff;">cross-modal &middot; matching</span>
+                <div style="font-size:0.72rem; color:#8b93a0; margin-top:5px;">intra-modal + inter-modal, over past &amp; future</div>
+              </div>
+            </div>
+            <span class="sarrow">&rarr;</span>
+            <div class="sbox"><span class="sh">GRPO update</span>reinforce outputs<br>above the group mean</div>
+          </div>
+          <p class="tcap" style="text-transform:none; color:#8b93a0; margin-top:9px;">
+            &#8635; the updated policy feeds back &mdash; group-relative advantage needs no separate value network.
+          </p>
+        </div>
       </div>
     </div>
   </section>
