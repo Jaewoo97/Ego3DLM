@@ -220,6 +220,15 @@
     .qa b { color: #1f3b73; }
     .rchip { display: inline-block; border-radius: 999px; padding: 4px 11px; font-size: 0.79rem; font-weight: 600;
              margin: 3px; border: 1px solid; }
+    /* data-driven output tokens (real sample) */
+    .smedia { border: 1px solid #e6e8ec; border-top: 3px solid #ccc; border-radius: 8px; background: #fff; padding: 6px;
+              width: 150px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .smlab { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; text-align: center; }
+    .smedia video, .smedia img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 5px;
+                                 background: #f2f3f5; display: block; }
+    .smtxt { font-size: 0.73rem; color: #374151; text-align: left; background: #f7f9fc; border-radius: 5px;
+             padding: 5px 7px; line-height: 1.3; flex: 1; }
+    .modes-fig { width: 100%; max-width: 260px; border: 1px solid #e6e8ec; border-radius: 8px; background: #fff; display: block; }
 
     /* Responsive */
     @media screen and (max-width: 767px) {
@@ -440,14 +449,6 @@
           <strong>115K semantic</strong> QA pairs across <strong>208 scenes</strong> &mdash; augmenting Nymeria, which lacks
           explicit scene descriptions.
         </p>
-        <figure class="paper-figure" style="max-width: 1080px;">
-          <img src="static/images/paper/data_generation.png" alt="Spatial-semantic scene awareness QA dataset generation: semantic awareness QA types on the left and spatial awareness directional clearance on the right."/>
-          <figcaption>
-            <strong>Semantic Awareness:</strong> for each 3D scene we use egocentric video to auto-generate QA pairs across six types (object, place, object nature, color, number, other) that describe and reason about the environment.
-            <strong>Spatial Awareness:</strong> the environment is partitioned into three angular sectors (front, left, right), and QA pairs predict directional clearance levels and the most navigable direction.
-          </figcaption>
-        </figure>
-
         <h3 class="title is-5" style="text-align:center; margin-top:2.2rem; margin-bottom:0.3rem;">Semantic QA dataset</h3>
         <p class="section-subheading" style="margin-bottom:0.9rem;">
           Browse egocentric frames and the automatically generated question&ndash;answer pairs grounded in them.
@@ -504,21 +505,36 @@
             <span class="sarrow">&rarr;</span>
             <div class="sbox slm"><span class="sh">Ego3DLM</span>single<br>autoregressive pass</div>
           </div>
-          <div class="tcap">Structured output sequence &mdash; one pass</div>
-          <div class="seq">
-            <div class="stok" style="background:#2b57a5;">Scene<br>reasoning</div>
+          <div class="tcap">Structured output sequence &mdash; one pass, on a real sample</div>
+          <div class="seq" style="align-items:stretch;">
+            <div class="smedia" style="border-top-color:#2b57a5;">
+              <div class="smlab" style="color:#2b57a5;">Scene reasoning</div>
+              <div class="smtxt">&ldquo;&hellip; front &amp; left blocked; the optimal direction to move is <b>right</b>.&rdquo;</div>
+            </div>
             <span class="sarrow">&rarr;</span>
-            <div class="stok" style="background:#64748b;">Past pose<small>tracking</small></div>
+            <div class="smedia" style="border-top-color:#64748b;">
+              <div class="smlab" style="color:#64748b;">Past pose</div>
+              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/past.mp4" type="video/mp4"></video>
+            </div>
             <span class="sarrow">&rarr;</span>
-            <div class="stok" style="background:#16a34a;">Future pose<small>forecast</small></div>
+            <div class="smedia" style="border-top-color:#16a34a;">
+              <div class="smlab" style="color:#16a34a;">Future pose</div>
+              <video autoplay loop muted playsinline><source src="static/videos/ego3dlm/panels/future.mp4" type="video/mp4"></video>
+            </div>
             <span class="sarrow">&rarr;</span>
-            <div class="stok" style="background:#d97706;">Past<br>narration</div>
+            <div class="smedia" style="border-top-color:#d97706;">
+              <div class="smlab" style="color:#d97706;">Past narration</div>
+              <div class="smtxt">&ldquo;C is walking across the bedroom, turns to the left &hellip;&rdquo;</div>
+            </div>
             <span class="sarrow">&rarr;</span>
-            <div class="stok" style="background:#d97706;">Future<br>description</div>
+            <div class="smedia" style="border-top-color:#d97706;">
+              <div class="smlab" style="color:#d97706;">Future description</div>
+              <div class="smtxt">&ldquo;&hellip; opens the hallway closet with his right hand &hellip;&rdquo;</div>
+            </div>
           </div>
           <p class="tcap" style="text-transform:none; color:#8b93a0; margin-top:9px;">
             <span style="color:#64748b;">&#9632;</span> past &amp; <span style="color:#16a34a;">&#9632;</span> future motion,
-            <span style="color:#d97706;">&#9632;</span> narration &mdash; predicted jointly, so pose and language stay mutually consistent.
+            <span style="color:#d97706;">&#9632;</span> narration &mdash; predicted jointly on one sample, so pose and language stay mutually consistent.
           </p>
         </div>
       </div>
@@ -540,8 +556,15 @@
             <div class="sbox slm"><span class="sh">Ego3DLM</span>policy</div>
             <span class="sarrow">&rarr;</span>
             <div class="scol">
-              <div class="tcap" style="margin:0 0 3px;">Sample G outputs</div>
-              <div class="sbox">o<sub>1</sub>, o<sub>2</sub>, &hellip;, o<sub>G</sub><br><small>poses + descriptions</small></div>
+              <div class="tcap" style="margin:0 0 3px;">Sample G = 8 candidate futures</div>
+              <div class="sbox" style="padding:7px;">
+                <img class="modes-fig" src="static/images/stage3_modes.png" alt="Eight candidate future trajectories, top-down; the best lowest-JPE candidate in bright green against the grey ground-truth path."/>
+                <div style="font-size:0.71rem; color:#6b7280; margin-top:4px;">
+                  <span style="color:#16a34a; font-weight:700;">&#9644;</span> best (JPE&nbsp;0.19)
+                  &nbsp; <span style="color:#7fd39a; font-weight:700;">&#9644;</span> others (&rarr;&nbsp;0.85)
+                  &nbsp; <span style="color:#64748b;">&#9644;</span> GT
+                </div>
+              </div>
             </div>
             <span class="sarrow">&rarr;</span>
             <div class="scol">
@@ -646,38 +669,15 @@
     </div>
   </section>
 
-  <!-- ============================ QUALITATIVE RESULTS ============================ -->
+  <!-- ============================ QUALITATIVE RESULTS (interactive viewer) ============================ -->
   <section class="hero is-small qual-section">
     <div class="hero-body">
       <div class="container">
         <h2 class="title is-3 section-heading">Qualitative Results</h2>
         <p class="section-subheading">
           Ego3DLM produces motion that conforms to both physical scene constraints and past context, while its
-          simultaneously generated description faithfully reflects the predicted motion.
-        </p>
-        <figure class="paper-figure" style="max-width: 1120px;">
-          <img src="static/images/paper/qual.png" alt="Qualitative comparison of motion forecasting and tracking against UniEgoMotion, EgoLM, and Ego3DLM without 3D scene."/>
-          <figcaption>
-            Qualitative results for motion forecasting and tracking. The ground-truth (GT) past motion is shown in
-            <span style="color:#c0392b;"><strong>red</strong></span>, and predicted future motion in
-            <span style="color:#2b57a5;"><strong>blue</strong></span>.
-            For the future motion narration below the figure,
-            <span style="color:#1a9850;"><strong>green</strong></span> highlights phrases matching the GT, while
-            <span style="color:#c0392b;"><strong>red</strong></span> highlights incorrect or mismatched descriptions.
-            Ego3DLM walks around the bed to the door, whereas the variant without a 3D scene penetrates the wall.
-          </figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================ INTERACTIVE 3D VIEWER ============================ -->
-  <section class="hero is-small method-section">
-    <div class="hero-body">
-      <div class="container">
-        <h2 class="title is-3 section-heading">Interactive 3D Viewer</h2>
-        <p class="section-subheading">
-          Explore the reconstructed 3D scene together with the predicted motion. <strong>Drag</strong> to orbit,
+          simultaneously generated description faithfully reflects the predicted motion. Explore it interactively below:
+          <strong>drag</strong> to orbit,
           <strong>right-drag</strong> to pan, <strong>scroll</strong> to zoom. Switch scenes, toggle each method,
           flip between forecasting and tracking, and scrub the timeline. Ground truth is grey;
           <span style="color:#2a9d54;font-weight:700;">Ours (Ego3DLM)</span> tracks it closely while baselines drift.
