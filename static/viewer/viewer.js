@@ -16,6 +16,10 @@ const HB = parseFloat(params.get('back') || '0.35');   // camera set-back behind
 const HR = parseFloat(params.get('rise') || '0.12');   // camera lift above the eyes (m)
 const GTCOL = params.get('gtcol');     // teaser capture: override GT skeleton colour (hex, no #)
 const PREDCOL = params.get('predcol'); // teaser capture: override Ours prediction colour
+const DASH = params.get('dash');       // tp panel: render the pose as dashed lines
+const TRAIL = params.get('trail');     // output panels: sparse dim onion-skin of earlier poses
+const ZOOM = parseFloat(params.get('zoom') || '1');   // camera distance scale (<1 = closer)
+const FRAMESEG = params.get('frameseg');              // 'past' | 'future' — frame that segment
 
 // ── three basics ────────────────────────────────────────────────────────────
 const stage = document.getElementById('stage');
@@ -54,6 +58,7 @@ const clock = new THREE.Clock();
 let acc = 0;
 let tpMesh = null;             // 3-point tracking markers (input)
 let tpTrails = null;           // 3-point tracking trajectories (head + both hands)
+let gtDash = null;             // dashed-line GT pose (tp panel: de-emphasise the body)
 let headCam = false;           // drive the camera from the wearer's head pose
 let egoReady = false;
 const tpDummy = new THREE.Object3D();
@@ -143,6 +148,64 @@ function buildGhostTrail(poses, bonePairs, colorHex) {
   return mesh;
 }
 
+// Dashed-line skeleton — used for the 3-point-tracking panel so the body reads as
+// a faint reference and the tracked points (markers + trails) stand out.
+function makeDashSkeleton(nBones, colorHex) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(nBones * 2 * 3), 3));
+  const m = new THREE.LineDashedMaterial({ color: new THREE.Color(colorHex),
+    transparent: true, opacity: 0.75, dashSize: 0.055, gapSize: 0.04 });
+  const ls = new THREE.LineSegments(g, m);
+  ls.frustumCulled = false; ls.visible = false; scene.add(ls);
+  return ls;
+}
+function updateDash(ls, joints, bonePairs) {
+  const pos = ls.geometry.attributes.position.array;
+  for (let i = 0; i < bonePairs.length; i++) {
+    const a = joints[bonePairs[i][0]], b = joints[bonePairs[i][1]];
+    pos[i * 6] = a[0]; pos[i * 6 + 1] = a[1]; pos[i * 6 + 2] = a[2];
+    pos[i * 6 + 3] = b[0]; pos[i * 6 + 4] = b[1]; pos[i * 6 + 5] = b[2];
+  }
+  ls.geometry.attributes.position.needsUpdate = true;
+  ls.computeLineDistances();               // required for the dash pattern
+}
+
+// Onion-skin motion trail — at the current frame, draw a few EARLIER poses of the
+// same sequence, sparsely spaced and fading toward the background, so the output
+// panels convey the temporal flow without clutter.
+const TRAIL_K = 3, TRAIL_STEP = 6, BG = new THREE.Color(0xf2f3f5);
+function makeTrail(nBones, color) {
+  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, depthWrite: false });
+  const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6), mat, TRAIL_K * nBones);
+  mesh.frustumCulled = false; mesh.renderOrder = 0; mesh.visible = false;
+  mesh.userData.color = (color && color.isColor) ? color.clone() : new THREE.Color(color);
+  scene.add(mesh);
+  return mesh;
+}
+function updateTrail(mesh, seq, curIdx, bonePairs) {
+  const base = mesh.userData.color, nb = bonePairs.length;
+  const d = new THREE.Object3D(), a = new THREE.Vector3(), b = new THREE.Vector3(), dir = new THREE.Vector3(), mid = new THREE.Vector3();
+  let inst = 0, any = false;
+  for (let k = 0; k < TRAIL_K; k++) {
+    const idx = curIdx - (k + 1) * TRAIL_STEP;
+    const has = idx >= 0 && idx < seq.length;
+    const col = base.clone().lerp(BG, 0.4 + 0.5 * (k / Math.max(1, TRAIL_K - 1)));   // older -> fades
+    for (let i = 0; i < nb; i++) {
+      if (has) {
+        const j = seq[idx];
+        a.fromArray(j[bonePairs[i][0]]); b.fromArray(j[bonePairs[i][1]]);
+        dir.subVectors(b, a); const len = dir.length() || 1e-6; mid.addVectors(a, b).multiplyScalar(0.5);
+        d.position.copy(mid); d.quaternion.setFromUnitVectors(UP, dir.normalize());
+        d.scale.set(BONE_R * 0.55, len, BONE_R * 0.55); any = true;
+      } else { d.position.set(0, -9999, 0); d.scale.setScalar(1e-6); }
+      d.updateMatrix(); mesh.setMatrixAt(inst, d.matrix); mesh.setColorAt(inst, col); inst++;
+    }
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.visible = any;
+}
+
 // ── data loading ────────────────────────────────────────────────────────────
 async function loadIndex() {
   const idx = await (await fetch(DATA + 'index.json')).json();
@@ -161,12 +224,14 @@ function disposeSample() {
     sk.bones.geometry.dispose(); sk.bones.material.dispose();
     sk.joints.geometry.dispose();
     if (sk.pastGhost) { scene.remove(sk.pastGhost); sk.pastGhost.geometry.dispose(); sk.pastGhost.material.dispose(); }
+    if (sk.trail) { scene.remove(sk.trail); sk.trail.geometry.dispose(); sk.trail.material.dispose(); }
     [sk.lineFut, sk.linePast].forEach(l => { if (l) { scene.remove(l); l.geometry.dispose(); l.material.dispose(); } });
   });
   skels = {};
   if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); grid = null; }
   if (tpMesh) { scene.remove(tpMesh); tpMesh.geometry.dispose(); tpMesh.material.dispose(); tpMesh = null; }
   if (tpTrails) { tpTrails.forEach(l => { scene.remove(l); l.geometry.dispose(); l.material.dispose(); }); tpTrails = null; }
+  if (gtDash) { scene.remove(gtDash); gtDash.geometry.dispose(); gtDash.material.dispose(); gtDash = null; }
 }
 
 async function loadSample(id) {
@@ -219,6 +284,11 @@ async function loadSample(id) {
     }
     skels[key] = sk;
   }
+
+  // teaser capture extras (inert in the normal viewer)
+  if (DASH) gtDash = makeDashSkeleton(m.bones.length, m.gt.color);
+  if (TRAIL) for (const key of [GT_KEY, 'ours_withGRPO'])
+    if (skels[key]) skels[key].trail = makeTrail(m.bones.length, skels[key].color);
 
   // faint floor grid at ~feet level
   const span = Math.max(...['0', '2'].map(i => m.motion_max[+i] - m.motion_min[+i]), 6) + 6;
@@ -274,10 +344,17 @@ async function loadSample(id) {
 
 function frameCamera() {
   if (headCam) return;                    // head-follow camera owns the view
-  const mn = meta.motion_min, mx = meta.motion_max;
+  let mn = meta.motion_min, mx = meta.motion_max;
+  if (FRAMESEG === 'past' || FRAMESEG === 'future') {   // frame just one segment (teaser panels)
+    const P = FRAMESEG === 'past' ? meta.gt.past : meta.gt.future;
+    mn = [Infinity, Infinity, Infinity]; mx = [-Infinity, -Infinity, -Infinity];
+    for (const fr of P) for (const j of fr) for (let k = 0; k < 3; k++) {
+      if (j[k] < mn[k]) mn[k] = j[k]; if (j[k] > mx[k]) mx[k] = j[k];
+    }
+  }
   const c = new THREE.Vector3((mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2);
   const size = Math.max(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2], 1.5);
-  const dist = Math.max(size * 2.4, 3.0);
+  const dist = Math.max(size * 2.4, 3.0) * ZOOM;
   controls.target.copy(c);
   camera.position.copy(c).add(new THREE.Vector3(0.75, 0.55, 1).normalize().multiplyScalar(dist));
   camera.updateProjectionMatrix();
@@ -312,10 +389,13 @@ function applyLayer() {   // isolate one layer for teaser-panel capture (?layer=
   if (grid) grid.visible = false;
   if (tpMesh) tpMesh.visible = tp && tpMesh.visible;
   if (tpTrails) tpTrails.forEach(l => l.visible = tp && l.visible);   // trails ride with the tp layer
+  if (gtDash) gtDash.visible = tp && gtDash.visible;                  // dashed pose rides with the tp layer
   for (const key of Object.keys(skels)) {
     const sk = skels[key];
-    // tp layer shows the GT pose alongside the tracked points; pose layer shows GT + ours
-    sk.group.visible = ((pose && (key === GT_KEY || key === 'ours_withGRPO')) || (tp && key === GT_KEY)) && sk.group.visible;
+    // tp layer shows the GT pose alongside the tracked points (dashed when DASH is set);
+    // pose layer shows GT + ours
+    sk.group.visible = ((pose && (key === GT_KEY || key === 'ours_withGRPO')) ||
+                        (tp && !DASH && key === GT_KEY)) && sk.group.visible;
     if (sk.lineFut) sk.lineFut.visible = false;
     if (sk.linePast) sk.linePast.visible = false;
     if (sk.pastGhost) sk.pastGhost.visible = false;
@@ -339,6 +419,7 @@ function setFrame(t) {
   gt.linePast.visible = !forecast;       // track: observed-past path
   gt.lineFut.visible = forecast;         // forecast: full continuous path
   if (gt.pastGhost) gt.pastGhost.visible = forecast;   // persistent past-motion ghosts
+  if (TRAIL && gt.trail) { if (forecast) updateTrail(gt.trail, meta._gtFwd, frame, bones); else gt.trail.visible = false; }
 
   const futStart = meta._futStart;
   for (const key of Object.keys(meta.methods)) {
@@ -353,6 +434,10 @@ function setFrame(t) {
     }
     sk.group.visible = show;
     if (show) poseSkeleton(sk, joints, bones);
+    if (TRAIL && sk.trail) {
+      if (show && forecast && frame >= futStart) updateTrail(sk.trail, meta.methods[key].pred_future, frame - futStart, bones);
+      else sk.trail.visible = false;
+    }
     sk.lineFut.visible = on && forecast;
     sk.linePast.visible = on && !forecast;
   }
@@ -375,6 +460,11 @@ function setFrame(t) {
   if (tpTrails) {                          // grow the head/hand trails up to the current past frame
     const kk = Math.max(1, Math.min(meta.n_past, frame + 1));
     for (const ln of tpTrails) { ln.visible = inPast; ln.geometry.setDrawRange(0, kk); }
+  }
+  if (DASH && gtDash) {                     // dashed body pose for the 3-point-tracking panel
+    const gj = forecast ? meta._gtFwd[frame] : (inPast ? meta.gt.past[frame] : null);
+    if (inPast && gj) { updateDash(gtDash, gj, bones); gtDash.visible = true; }
+    else gtDash.visible = false;
   }
   if (egoReady) {
     const ct = Math.min(inPast ? frame : nPast - 1, nPast - 1) / meta.fps;
