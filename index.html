@@ -555,32 +555,25 @@
           <div class="srow">
             <div class="sbox slm"><span class="sh">Ego3DLM</span>policy</div>
             <span class="sarrow">&rarr;</span>
+            <div class="sbox"><span class="sh">Sample G = 8</span>candidate outputs<br><small>poses + descriptions</small></div>
+            <span class="sarrow">&rarr;</span>
             <div class="scol">
-              <div class="tcap" style="margin:0 0 3px;">Sample G = 8 candidate futures</div>
-              <div class="sbox" style="padding:7px;">
-                <img class="modes-fig" src="static/images/stage3_modes.png" alt="Eight candidate future trajectories, top-down; the best lowest-JPE candidate in bright green against the grey ground-truth path."/>
-                <div style="font-size:0.71rem; color:#6b7280; margin-top:4px;">
-                  <span style="color:#16a34a; font-weight:700;">&#9644;</span> best (JPE&nbsp;0.19)
-                  &nbsp; <span style="color:#7fd39a; font-weight:700;">&#9644;</span> others (&rarr;&nbsp;0.85)
-                  &nbsp; <span style="color:#64748b;">&#9644;</span> GT
+              <div class="tcap" style="margin:0 0 3px;">Multi-modal reward &mdash; diverse across the group</div>
+              <div class="sbox" style="padding:8px; max-width:320px;">
+                <img class="modes-fig" style="max-width:300px;" src="static/images/stage3_rewards.png" alt="Per-candidate reward (1 minus JPE) across the 8 sampled candidates; candidates above the group mean are reinforced in green, those below suppressed in grey."/>
+                <div style="margin-top:4px;">
+                  <span class="rchip" style="color:#15803d; border-color:#86efac; background:#f0fdf4;">motion &middot; 1&minus;JPE</span>
+                  <span class="rchip" style="color:#b45309; border-color:#fcd34d; background:#fffbeb;">text &middot; BLEU</span>
+                  <span class="rchip" style="color:#7c3aed; border-color:#ddd6fe; background:#f5f3ff;">cross-modal &middot; matching</span>
                 </div>
               </div>
             </div>
             <span class="sarrow">&rarr;</span>
-            <div class="scol">
-              <div class="tcap" style="margin:0 0 3px;">Multi-modal reward</div>
-              <div class="sbox" style="padding:10px 12px; max-width:200px;">
-                <span class="rchip" style="color:#15803d; border-color:#86efac; background:#f0fdf4;">motion &middot; 1&minus;JPE</span>
-                <span class="rchip" style="color:#b45309; border-color:#fcd34d; background:#fffbeb;">text &middot; BLEU</span>
-                <span class="rchip" style="color:#7c3aed; border-color:#ddd6fe; background:#f5f3ff;">cross-modal &middot; matching</span>
-                <div style="font-size:0.72rem; color:#8b93a0; margin-top:5px;">intra-modal + inter-modal, over past &amp; future</div>
-              </div>
-            </div>
-            <span class="sarrow">&rarr;</span>
-            <div class="sbox"><span class="sh">GRPO update</span>reinforce outputs<br>above the group mean</div>
+            <div class="sbox"><span class="sh">GRPO update</span>reinforce candidates<br>above the group mean</div>
           </div>
           <p class="tcap" style="text-transform:none; color:#8b93a0; margin-top:9px;">
-            &#8635; the updated policy feeds back &mdash; group-relative advantage needs no separate value network.
+            each candidate scores differently &mdash; those above the group-relative mean are pushed up (&#8593;), the rest down;
+            &#8635; no separate value network needed.
           </p>
         </div>
       </div>
