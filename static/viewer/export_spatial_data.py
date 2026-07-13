@@ -27,10 +27,13 @@ SKELETON_PAIRS = [
     [12,11],[13,12],[14,13],[15,1],[16,15],[17,16],[18,17],[19,1],[20,19],[21,20],[22,21],
 ]
 # walking clips with a sweeping best-direction (distinct scenes)
+# Chosen for CLEARANCE DIVERSITY across front/left/right (so the highlighted
+# obstacles differ by direction), not just walking — a person turning near
+# obstacles with one side open reads best.
 SAMPLES = [
-    ('walk',   'Living area — navigating',     '20230829_s1_angel_roberts_act2_zv48bm/0043.pt'),
-    ('choose', 'Room — choosing a path',       '20230803_s1_jennifer_sexton_act3_y5o5bu/0088.pt'),
-    ('hall',   'Hallway — walking through',     '20230803_s0_robert_howard_act4_e29s94/0164.pt'),
+    ('open',   'One direction opens up',      '20230829_s1_angel_roberts_act2_zv48bm/0040.pt'),  # LOW/MID/HIGH mix
+    ('mixed',  'Partial clearance around',    '20230823_s1_alison_riddle_act3_ij6e0r/0174.pt'),   # LOW/MID, some motion
+    ('boxed',  'Enclosed, facing a gap',      '20230817_s0_brittney_powell_act3_1t2she/0088.pt'),  # LOW/MID
 ]
 
 R_UP  = np.array([[1,0,0],[0,0,1],[0,-1,0]], float)   # world +Z up -> viewer +Y up

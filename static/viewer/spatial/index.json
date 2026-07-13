@@ -1,19 +1,19 @@
 {
  "samples": [
   {
-   "id": "walk",
-   "label": "Living area \u2014 navigating",
-   "file": "walk.json"
+   "id": "open",
+   "label": "One direction opens up",
+   "file": "open.json"
   },
   {
-   "id": "choose",
-   "label": "Room \u2014 choosing a path",
-   "file": "choose.json"
+   "id": "mixed",
+   "label": "Partial clearance around",
+   "file": "mixed.json"
   },
   {
-   "id": "hall",
-   "label": "Hallway \u2014 walking through",
-   "file": "hall.json"
+   "id": "boxed",
+   "label": "Enclosed, facing a gap",
+   "file": "boxed.json"
   }
  ]
 }

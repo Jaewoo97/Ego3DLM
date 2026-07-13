@@ -31,6 +31,9 @@ let boneMesh = null, jointMesh = null, wedges = [], arrow = null;
 let frame = 0, total = 1, playing = false, speed = 1;
 const clock = new THREE.Clock(); let acc = 0;
 const dummy = new THREE.Object3D();
+let pcPos = null, hlObj = null;                 // raw point positions + obstacle-highlight cloud
+const HEAD_I = 6;
+const CAT_COL3 = [new THREE.Color(0xef4444), new THREE.Color(0xf59e0b), new THREE.Color(0x22c55e)];  // LOW/MID/HIGH
 
 // ── wedge geometry (flat triangle fan, updated per frame) ───────────────────
 function makeWedge() {
@@ -83,10 +86,10 @@ function poseSkeleton(joints, bones) {
 
 // ── load ────────────────────────────────────────────────────────────────────
 function disposeSample() {
-  [pcObj, grid, boneMesh, jointMesh, arrow, ...wedges].forEach(o => {
+  [pcObj, grid, boneMesh, jointMesh, arrow, hlObj, ...wedges].forEach(o => {
     if (!o) return; scene.remove(o); o.geometry?.dispose(); o.material?.dispose();
   });
-  pcObj = grid = boneMesh = jointMesh = arrow = null; wedges = [];
+  pcObj = grid = boneMesh = jointMesh = arrow = hlObj = null; pcPos = null; wedges = [];
 }
 async function loadSample(id) {
   document.getElementById('loading').classList.remove('hidden');
@@ -107,6 +110,15 @@ async function loadSample(id) {
   pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
   pcObj = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.02, vertexColors: true, sizeAttenuation: true }));
   pcObj.frustumCulled = false; scene.add(pcObj);
+
+  // obstacle-highlight cloud: the scene points that limit each direction's clearance
+  pcPos = pos;
+  const HL_MAX = 8000, hg = new THREE.BufferGeometry();
+  hg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(HL_MAX * 3), 3));
+  hg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(HL_MAX * 3), 3));
+  hg.setDrawRange(0, 0);
+  hlObj = new THREE.Points(hg, new THREE.PointsMaterial({ size: 0.075, vertexColors: true, sizeAttenuation: true }));
+  hlObj.frustumCulled = false; hlObj.renderOrder = 1; scene.add(hlObj);
 
   buildSkeleton(m.n_joints, m.bones.length);
   wedges = [makeWedge(), makeWedge(), makeWedge()];
@@ -156,8 +168,49 @@ function setFrame(t) {
   arrow.position.set(g[0] + bdir[0] * br, gy + 0.15, g[2] + bdir[1] * br);
   arrow.quaternion.setFromUnitVectors(UP, new THREE.Vector3(bdir[0], 0, bdir[1]).normalize());
   document.getElementById('best').innerHTML = 'Best direction: <b>' + DIR_TXT[f.best] + '</b>';
+  updateHighlights(frame);
   document.getElementById('timeline').value = String(frame);
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
+}
+
+// Highlight the scene points responsible for each direction's clearance: the
+// nearest obstacle cluster inside each ±60° cone (within a head-height band),
+// coloured by that direction's LOW/MID/HIGH level.
+function updateHighlights(fr) {
+  if (!pcPos || !hlObj) return;
+  const f = meta.frames[fr], g = f.ground, head = meta.pose[fr][HEAD_I];
+  const hx = g[0], hy = head[1], hz = g[2];
+  const fx = f.fwd[0], fz = f.fwd[1], rx = -fz, rz = fx;
+  const dirs = [[fx, fz], [-rx, -rz], [rx, rz]];
+  const cosHalf = Math.cos(HALF), n = pcPos.length / 3;
+  const dmin = [Infinity, Infinity, Infinity];
+  for (let i = 0; i < n; i++) {                          // pass 1: nearest obstacle per direction
+    const py = pcPos[i * 3 + 1]; if (Math.abs(py - hy) > 1.0) continue;
+    const ex = pcPos[i * 3] - hx, ez = pcPos[i * 3 + 2] - hz, d = Math.hypot(ex, ez);
+    if (d < 0.3 || d > 5.0) continue;
+    const nx = ex / d, nz = ez / d;
+    for (let k = 0; k < 3; k++) if (nx * dirs[k][0] + nz * dirs[k][1] >= cosHalf && d < dmin[k]) dmin[k] = d;
+  }
+  const posA = hlObj.geometry.attributes.position.array, colA = hlObj.geometry.attributes.color.array;
+  const HL_MAX = posA.length / 3; let w = 0;
+  for (let i = 0; i < n && w < HL_MAX; i++) {             // pass 2: highlight the near-obstacle cluster
+    const py = pcPos[i * 3 + 1]; if (Math.abs(py - hy) > 1.0) continue;
+    const ex = pcPos[i * 3] - hx, ez = pcPos[i * 3 + 2] - hz, d = Math.hypot(ex, ez);
+    if (d < 0.3 || d > 5.0) continue;
+    const nx = ex / d, nz = ez / d;
+    for (let k = 0; k < 3; k++) {
+      if (dmin[k] === Infinity) continue;
+      if (nx * dirs[k][0] + nz * dirs[k][1] >= cosHalf && d <= dmin[k] + 0.6) {
+        const c = CAT_COL3[f.cat[k]];
+        posA[w * 3] = pcPos[i * 3]; posA[w * 3 + 1] = pcPos[i * 3 + 1]; posA[w * 3 + 2] = pcPos[i * 3 + 2];
+        colA[w * 3] = c.r; colA[w * 3 + 1] = c.g; colA[w * 3 + 2] = c.b; w++;
+        break;                                           // one colour per point (nearest cone wins)
+      }
+    }
+  }
+  hlObj.geometry.setDrawRange(0, w);
+  hlObj.geometry.attributes.position.needsUpdate = true;
+  hlObj.geometry.attributes.color.needsUpdate = true;
 }
 
 function animate() {
