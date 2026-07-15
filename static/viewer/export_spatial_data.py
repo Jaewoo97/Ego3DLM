@@ -31,9 +31,12 @@ SKELETON_PAIRS = [
 # obstacles differ by direction), not just walking — a person turning near
 # obstacles with one side open reads best.
 SAMPLES = [
-    ('open',   'One direction opens up',      '20230829_s1_angel_roberts_act2_zv48bm/0040.pt'),  # LOW/MID/HIGH mix
-    ('mixed',  'Partial clearance around',    '20230823_s1_alison_riddle_act3_ij6e0r/0174.pt'),   # LOW/MID, some motion
-    ('boxed',  'Enclosed, facing a gap',      '20230817_s0_brittney_powell_act3_1t2she/0088.pt'),  # LOW/MID
+    ('open',   'One direction opens up',       '20230829_s1_angel_roberts_act2_zv48bm/0040.pt'),   # 024763  LOW/MID/HIGH
+    ('walk',   'Walking, clearance shifts',    '20230816_s1_jeffery_bryant_act3_ln6bpy/0043.pt'),  # 018702  walks 2.7 m
+    ('turn',   'Turning past obstacles',       '20230803_s0_robert_howard_act4_e29s94/0067.pt'),   # 013771  every frame mixed
+    ('mixed',  'Partial clearance around',     '20230823_s1_alison_riddle_act3_ij6e0r/0174.pt'),   # 022949
+    ('room',   'Scanning a cluttered room',    '20230815_s0_samantha_lester_act0_513kae/0072.pt'), # 017205
+    ('boxed',  'Enclosed, facing a gap',       '20230817_s0_brittney_powell_act3_1t2she/0088.pt'),  # 019123
 ]
 
 R_UP  = np.array([[1,0,0],[0,0,1],[0,-1,0]], float)   # world +Z up -> viewer +Y up

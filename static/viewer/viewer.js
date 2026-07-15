@@ -539,11 +539,6 @@ function setFrame(t) {
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
   document.getElementById('phase').textContent =
     forecast ? (frame < meta._futStart ? 'observed past · input' : 'predicting future · output') : 'tracking past · input';
-  // GT narration follows the phase — past and future are separate annotated segments
-  const inFut = forecast && frame >= meta._futStart;
-  const gtxt = inFut ? (meta.gt_text_future || '') : (meta.gt_text || '');
-  document.getElementById('s-gt').innerHTML =
-    gtxt ? '<b>Ground-truth ' + (inFut ? 'future' : 'past') + ' motion:</b> ' + gtxt : '';
   if (TRAJ) {   // trajectory tube draws only up to the current timestep of its segment
     const isFut = (TRACESEG === 'future');
     const active = isFut ? (forecast && frame >= meta._futStart) : (forecast && frame < meta.n_past);
@@ -553,16 +548,6 @@ function setFrame(t) {
   }
   if (headCam) applyHeadCam(frame);
   if (LAYER) applyLayer();
-  updateCot();
-}
-
-function updateCot() {
-  // show the leading enabled method's spatial reasoning (fallback: ours)
-  const order = ['ours_withGRPO', ...Object.keys(meta.methods)];
-  const key = order.find(k => enabled[k]) || 'ours_withGRPO';
-  const cot = (meta.methods[key] && meta.methods[key].cot) || '';
-  const el = document.getElementById('s-cot');
-  el.innerHTML = cot ? `<b>${meta.methods[key].label} — spatial reasoning:</b> ${cot}` : '';
 }
 
 // ── method chips ────────────────────────────────────────────────────────────

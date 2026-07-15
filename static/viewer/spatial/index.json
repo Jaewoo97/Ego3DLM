@@ -6,9 +6,24 @@
    "file": "open.json"
   },
   {
+   "id": "walk",
+   "label": "Walking, clearance shifts",
+   "file": "walk.json"
+  },
+  {
+   "id": "turn",
+   "label": "Turning past obstacles",
+   "file": "turn.json"
+  },
+  {
    "id": "mixed",
    "label": "Partial clearance around",
    "file": "mixed.json"
+  },
+  {
+   "id": "room",
+   "label": "Scanning a cluttered room",
+   "file": "room.json"
   },
   {
    "id": "boxed",

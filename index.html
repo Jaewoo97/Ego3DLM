@@ -19,7 +19,7 @@
   <meta name="keywords" content="Egocentric Vision, Human Motion Forecasting, Human Motion Prediction, Multi-modal Large Language Models, 3D Scene, Motion Tracking, ECCV 2026, Nymeria">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Ego3DLM: Ego-Human Motion Prediction with 3D-Aware LLM (Under Construction)</title>
+  <title>Ego3DLM: Ego-Human Motion Prediction with 3D-Aware LLM</title>
   <link rel="icon" href="static/images/favicon.ico">
   <link rel="apple-touch-icon" href="static/images/favicon.ico">
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
@@ -229,6 +229,21 @@
     .smtxt { font-size: 0.73rem; color: #374151; text-align: left; background: #f7f9fc; border-radius: 5px;
              padding: 5px 7px; line-height: 1.3; flex: 1; }
     .modes-fig { width: 100%; max-width: 260px; border: 1px solid #e6e8ec; border-radius: 8px; background: #fff; display: block; }
+    /* reward explanation cards */
+    .reward-cards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; max-width: 900px; margin: 0.7rem auto 0; }
+    .rcard { flex: 1 1 250px; max-width: 285px; background: #fff; border: 1px solid #e6e8ec; border-top: 3px solid #ccc;
+             border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 8px; }
+    .rc-h { font-weight: 700; font-size: 0.95rem; text-align: center; }
+    .rc-fig { display: flex; align-items: center; justify-content: center; min-height: 118px; }
+    .rc-fig img { max-height: 150px; max-width: 100%; }
+    .rc-formula { text-align: center; font-size: 0.85rem; color: #1f3b73; font-weight: 600; background: #f2f6fc; border-radius: 6px; padding: 5px 8px; }
+    .rc-txt { font-size: 0.79rem; color: #374151; line-height: 1.4; }
+    .text-fig { flex-direction: column; gap: 6px; width: 100%; }
+    .text-fig > div { background: #f7f9fc; border-radius: 6px; padding: 6px 8px; color: #374151; font-size: 0.78rem; line-height: 1.35; }
+    .text-fig em { font-style: normal; color: #15803d; font-weight: 600; background: #e7f6ec; border-radius: 3px; padding: 0 2px; }
+    .text-fig .tag { display: inline-block; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; margin-right: 5px; }
+    .text-fig .tref { background: #e2e8f0; color: #475569; }
+    .text-fig .tpred { background: #fff3e0; color: #b45309; }
 
     /* Responsive */
     @media screen and (max-width: 767px) {
@@ -264,10 +279,6 @@
               <br>
               <span class="publication-venue">ECCV 2026</span>
               <span class="eql-cntrb"><small><br><sup>*</sup>Indicates Equal Contribution</small></span>
-            </div>
-
-            <div class="has-text-centered" style="margin-top: 0.7rem;">
-              <span style="display:inline-block; background:#fff3cd; color:#8a6d3b; border:1px solid #ffe69c; border-radius:999px; padding:4px 15px; font-size:0.92rem; font-weight:700; letter-spacing:0.02em;">🚧 Project page under construction</span>
             </div>
 
             <div class="column has-text-centered">
@@ -576,6 +587,44 @@
             each candidate scores differently &mdash; those above the group-relative mean are pushed up (&#8593;), the rest down;
             &#8635; no separate value network needed.
           </p>
+        </div>
+
+        <div class="tcap" style="margin-top:1.6rem;">What each reward measures &amp; how it is scored</div>
+        <div class="reward-cards">
+          <div class="rcard" style="border-top-color:#16a34a;">
+            <div class="rc-h" style="color:#15803d;">Motion accuracy</div>
+            <div class="rc-fig"><img src="static/images/reward_motion.png" alt="Predicted skeleton (green) over the ground-truth skeleton (grey) with per-joint error lines."></div>
+            <div class="rc-formula">R<sub>motion</sub> = max(0, 1 &minus; JPE)</div>
+            <div class="rc-txt"><b>JPE</b> (joint position error) is the mean distance between predicted (<span style="color:#16a34a;font-weight:600;">green</span>) and ground-truth (<span style="color:#64748b;font-weight:600;">grey</span>) joints &mdash; high reward when the poses align.</div>
+          </div>
+          <div class="rcard" style="border-top-color:#d97706;">
+            <div class="rc-h" style="color:#b45309;">Description quality</div>
+            <div class="rc-fig text-fig">
+              <div><span class="tag tref">ref</span><em>walking in the hallway</em>, <em>opens the</em> closet</div>
+              <div><span class="tag tpred">pred</span><em>walking in the hallway</em>, <em>opens the</em> cabinet</div>
+            </div>
+            <div class="rc-formula">R<sub>text</sub> = BLEU-4</div>
+            <div class="rc-txt">n-gram overlap between the predicted narration and the reference &mdash; matching phrases (<span style="color:#15803d;font-weight:600;">green</span>) raise the score.</div>
+          </div>
+          <div class="rcard" style="border-top-color:#7c3aed;">
+            <div class="rc-h" style="color:#7c3aed;">Cross-modal match</div>
+            <div class="rc-fig">
+              <svg viewBox="0 0 220 150" width="200" style="max-width:100%;" role="img" aria-label="Motion and text embeddings in a shared space; small distance means they agree.">
+                <rect x="5" y="8" width="210" height="134" rx="12" fill="#faf7ff" stroke="#e7e0f6"/>
+                <text x="110" y="24" text-anchor="middle" font-size="9" fill="#9488b8">shared embedding space</text>
+                <circle cx="66" cy="104" r="4.5" fill="#cbd5e1"/><text x="66" y="121" text-anchor="middle" font-size="8" fill="#94a3b8">GT motion</text>
+                <circle cx="156" cy="52" r="4.5" fill="#cbd5e1"/><text x="156" y="44" text-anchor="middle" font-size="8" fill="#94a3b8">GT text</text>
+                <line x1="96" y1="90" x2="156" y2="52" stroke="#d6ccf0" stroke-width="1.2" stroke-dasharray="2 2"/>
+                <line x1="132" y1="74" x2="66" y2="104" stroke="#d6ccf0" stroke-width="1.2" stroke-dasharray="2 2"/>
+                <line x1="96" y1="90" x2="132" y2="74" stroke="#7c3aed" stroke-width="2" stroke-dasharray="3 2"/>
+                <circle cx="96" cy="90" r="7" fill="#16a34a"/><text x="89" y="82" text-anchor="end" font-size="9" fill="#15803d" font-weight="700">motion</text>
+                <circle cx="132" cy="74" r="7" fill="#d97706"/><text x="141" y="70" text-anchor="start" font-size="9" fill="#b45309" font-weight="700">text</text>
+                <text x="126" y="97" text-anchor="middle" font-size="9.5" fill="#7c3aed" font-weight="700">d<tspan baseline-shift="sub" font-size="7">pp</tspan></text>
+              </svg>
+            </div>
+            <div class="rc-formula">R<sub>match</sub> = &minus;(d<sub>gp</sub> + d<sub>pg</sub> + d<sub>pp</sub>)</div>
+            <div class="rc-txt">Euclidean distance between motion and text embeddings in a shared space &mdash; small distance means the pose and its description agree (cross-checked over GT &amp; predicted pairs).</div>
+          </div>
         </div>
       </div>
     </div>
