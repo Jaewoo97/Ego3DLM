@@ -27,16 +27,16 @@ SKELETON_PAIRS = [
     [12,11],[13,12],[14,13],[15,1],[16,15],[17,16],[18,17],[19,1],[20,19],[21,20],[22,21],
 ]
 # walking clips with a sweeping best-direction (distinct scenes)
-# Chosen for CLEARANCE DIVERSITY across front/left/right (so the highlighted
-# obstacles differ by direction), not just walking — a person turning near
-# obstacles with one side open reads best.
+# Mostly WALKING scenes (global motion, disp > 1.6 m) with clearance variety, so
+# you watch the clearance/obstacles change as the person navigates. Diverse
+# recordings; brittney/0048 also has an open (HIGH) direction.
 SAMPLES = [
-    ('open',   'One direction opens up',       '20230829_s1_angel_roberts_act2_zv48bm/0040.pt'),   # 024763  LOW/MID/HIGH
-    ('walk',   'Walking, clearance shifts',    '20230816_s1_jeffery_bryant_act3_ln6bpy/0043.pt'),  # 018702  walks 2.7 m
-    ('turn',   'Turning past obstacles',       '20230803_s0_robert_howard_act4_e29s94/0067.pt'),   # 013771  every frame mixed
-    ('mixed',  'Partial clearance around',     '20230823_s1_alison_riddle_act3_ij6e0r/0174.pt'),   # 022949
-    ('room',   'Scanning a cluttered room',    '20230815_s0_samantha_lester_act0_513kae/0072.pt'), # 017205
-    ('boxed',  'Enclosed, facing a gap',       '20230817_s0_brittney_powell_act3_1t2she/0088.pt'),  # 019123
+    ('corridor',  'Walking down a corridor',     '20230829_s1_angel_roberts_act2_zv48bm/0044.pt'),   # 024767  7.2 m
+    ('across',    'Walking across a room',        '20230817_s0_brittney_powell_act3_1t2she/0048.pt'),  # 019083  4.6 m, LOW/MID/HIGH
+    ('shift',     'Walking, clearance shifts',    '20230816_s1_jeffery_bryant_act3_ln6bpy/0043.pt'),   # 018702  2.7 m
+    ('turning',   'Walking and turning',          '20230823_s0_evelyn_moody_act0_zkzw4v/0026.pt'),     # 021686  1.7 m
+    ('navigate',  'Navigating a room',            '20230823_s1_alison_riddle_act1_ayav9z/0117.pt'),    # 022500  1.8 m
+    ('furniture', 'Walking past furniture',       '20230803_s1_jennifer_sexton_act3_y5o5bu/0157.pt'),  # 014423  1.6 m
 ]
 
 R_UP  = np.array([[1,0,0],[0,0,1],[0,-1,0]], float)   # world +Z up -> viewer +Y up
@@ -110,6 +110,10 @@ def main():
                 fwd=r4([float(fwd_v[t, 0]), float(fwd_v[t, 2])]),
                 cat=cat, best=best,
             ))
+        # keep only points within the height of the human (floor .. just above the head),
+        # dropping the ceiling / high clutter so the navigable obstacles are what's shown
+        head_top = float(gpv[:, HEAD_I, 1].max()) + 0.25
+        pcv = pcv[(pcv[:, 1] >= floor_y - 0.15) & (pcv[:, 1] <= head_top)]
         pcf = pcv.astype(np.float32)
         pcf.tofile(os.path.join(OUT, f'{sid}.pc.bin'))
         allj = gpv[:T].reshape(-1, 3)

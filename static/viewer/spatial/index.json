@@ -1,34 +1,34 @@
 {
  "samples": [
   {
-   "id": "open",
-   "label": "One direction opens up",
-   "file": "open.json"
+   "id": "corridor",
+   "label": "Walking down a corridor",
+   "file": "corridor.json"
   },
   {
-   "id": "walk",
+   "id": "across",
+   "label": "Walking across a room",
+   "file": "across.json"
+  },
+  {
+   "id": "shift",
    "label": "Walking, clearance shifts",
-   "file": "walk.json"
+   "file": "shift.json"
   },
   {
-   "id": "turn",
-   "label": "Turning past obstacles",
-   "file": "turn.json"
+   "id": "turning",
+   "label": "Walking and turning",
+   "file": "turning.json"
   },
   {
-   "id": "mixed",
-   "label": "Partial clearance around",
-   "file": "mixed.json"
+   "id": "navigate",
+   "label": "Navigating a room",
+   "file": "navigate.json"
   },
   {
-   "id": "room",
-   "label": "Scanning a cluttered room",
-   "file": "room.json"
-  },
-  {
-   "id": "boxed",
-   "label": "Enclosed, facing a gap",
-   "file": "boxed.json"
+   "id": "furniture",
+   "label": "Walking past furniture",
+   "file": "furniture.json"
   }
  ]
 }
