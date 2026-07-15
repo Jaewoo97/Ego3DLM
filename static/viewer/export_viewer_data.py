@@ -46,7 +46,7 @@ SKELETON_PAIRS = [
 SAMPLES = [
     ('bedroom', 'Bedroom → hallway (paper figure)',       '20230821_s1_william_wilson_act3_gnf0bz/0050.pt'),
     ('kitchen', 'Living area — talking then walking',     '20230822_s0_kyle_parker_act2_y3l7lv/0062.pt'),
-    ('living',  'Living room — walking and turning',       '20230817_s0_brittney_powell_act3_1t2she/0050.pt'),
+    ('living',  'Living area — walking to the sofa',       '20230809_s1_laura_smith_act1_iarj4m/0003.pt'),
 ]
 
 # world (+Z up) -> viewer (+Y up):  (x,y,z) -> (x, z, -y)
