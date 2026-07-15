@@ -217,6 +217,11 @@ def main():
             Rp, tp = align_seg(info['gp'], ref['gp'])   # align past segment
             Rf, tf = align_seg(info['gf'], ref['gf'])   # align future segment on its own
             pp = W(apply_rt(info['pp'], Rp, tp))
+            # tracking display: align each frame's head to the GT past head (the head is a
+            # known 3-point tracking input), so the tracked body overlays GT rather than
+            # floating up to ~2 m off.
+            Tpp = min(pp.shape[0], gt_past.shape[0])
+            pp[:Tpp] = pp[:Tpp] + (gt_past[:Tpp, HEAD_I:HEAD_I + 1] - pp[:Tpp, HEAD_I:HEAD_I + 1])
             pf = W(apply_rt(info['modes'][info['best']], Rf, tf))
             entry = dict(label=mlabel, color=color, ade=round(info['ade'], 3),
                          pred_past=r3(pp), pred_future=r3(pf), cot=info['cot'])

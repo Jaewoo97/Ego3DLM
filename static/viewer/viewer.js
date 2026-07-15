@@ -112,6 +112,25 @@ function poseSkeleton(sk, joints, bonePairs) {
   sk.bones.instanceMatrix.needsUpdate = true;
 }
 
+// A predicted pose is valid only if it's finite and not a degenerate/null pose
+// (all joints collapsed to a point). A prediction that ends earlier than the GT
+// (or hits a null frame) simply stops being drawn from there on.
+function validPose(j) {
+  if (!j || !j.length) return false;
+  let mn0 = Infinity, mx0 = -Infinity, mn1 = Infinity, mx1 = -Infinity, mn2 = Infinity, mx2 = -Infinity;
+  for (const p of j) {
+    if (isNaN(p[0]) || isNaN(p[1]) || isNaN(p[2])) return false;
+    if (p[0] < mn0) mn0 = p[0]; if (p[0] > mx0) mx0 = p[0];
+    if (p[1] < mn1) mn1 = p[1]; if (p[1] > mx1) mx1 = p[1];
+    if (p[2] < mn2) mn2 = p[2]; if (p[2] > mx2) mx2 = p[2];
+  }
+  return Math.max(mx0 - mn0, mx1 - mn1, mx2 - mn2) > 0.2;   // a real body spans > 20 cm
+}
+function validLen(seq) {   // number of leading frames before the first null/degenerate pose
+  for (let t = 0; t < seq.length; t++) if (!validPose(seq[t])) return t;
+  return seq.length;
+}
+
 function rootLine(seq, colorHex, opacity) {
   const pos = new Float32Array(seq.length * 3);
   for (let t = 0; t < seq.length; t++) {
@@ -315,6 +334,10 @@ async function loadSample(id) {
   // skeletons: GT + each method
   const specs = [[GT_KEY, m.gt.color, m.gt]];
   for (const key of Object.keys(m.methods)) specs.push([key, m.methods[key].color, m.methods[key]]);
+  for (const key of Object.keys(m.methods)) {   // stop each prediction at its valid length (no null pose)
+    m.methods[key]._futValid = validLen(m.methods[key].pred_future);
+    m.methods[key]._pastValid = validLen(m.methods[key].pred_past);
+  }
   for (const [key, color, entry] of specs) {
     const sk = makeSkeleton(color, m.n_joints, m.bones.length);
     if (key === GT_KEY) {
@@ -494,11 +517,11 @@ function setFrame(t) {
     const sk = skels[key], on = !!enabled[key];
     let show = false, joints = null;
     if (on && forecast && frame >= futStart) {    // predictions overlay on the future only
-      const idx = frame - futStart, seq = meta.methods[key].pred_future;
-      if (idx < seq.length) { show = true; joints = seq[idx]; }   // no padding
-    } else if (on && !forecast) {                 // tracking: pred_past
-      const seq = meta.methods[key].pred_past;
-      if (frame < seq.length) { show = true; joints = seq[frame]; }
+      const idx = frame - futStart, mk = meta.methods[key];
+      if (idx < mk._futValid) { show = true; joints = mk.pred_future[idx]; }   // stop when the prediction ends — no null pose
+    } else if (on && !forecast) {                 // tracking: pred_past (head-aligned to GT in the exporter)
+      const mk = meta.methods[key];
+      if (frame < mk._pastValid) { show = true; joints = mk.pred_past[frame]; }
     }
     sk.group.visible = show;
     if (show) poseSkeleton(sk, joints, bones);
