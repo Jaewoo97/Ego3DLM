@@ -14,7 +14,7 @@
   },
   {
    "id": "living",
-   "label": "Living room \u2014 walking and turning",
+   "label": "Living area \u2014 walking to the sofa",
    "file": "living.json",
    "pc_kb": 586
   }
