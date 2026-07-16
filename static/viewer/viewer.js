@@ -418,6 +418,7 @@ async function loadSample(id) {
   }
   document.getElementById('timeline').max = String(total - 1);
   document.getElementById('s-label').textContent = m.label;
+  _narrKey = null;                          // force narration rebuild for the new scene
   buildMethodChips();
   frameCamera();
   setFrame(0);
@@ -562,6 +563,8 @@ function setFrame(t) {
   document.getElementById('framelab').textContent = `frame ${frame + 1} / ${total}`;
   document.getElementById('phase').textContent =
     forecast ? (frame < meta._futStart ? 'observed past · input' : 'predicting future · output') : 'tracking past · input';
+  // narration follows the segment on screen: past (observed/tracked) vs predicted future
+  updateNarration((forecast && frame >= meta._futStart) ? 'future' : 'past');
   if (TRAJ) {   // trajectory tube draws only up to the current timestep of its segment
     const isFut = (TRACESEG === 'future');
     const active = isFut ? (forecast && frame >= meta._futStart) : (forecast && frame < meta.n_past);
@@ -591,6 +594,35 @@ function chip(key, label, color, ade, isGT) {
                 (ade != null ? ` <span class="ade">${ade.toFixed(2)}</span>` : '');
   if (!isGT) c.onclick = () => { enabled[key] = !enabled[key]; c.classList.toggle('off', !enabled[key]); setFrame(frame); };
   return c;
+}
+
+// ── narration panel ───────────────────────────────────────────────────────────
+// Show the GT + currently-visible methods' descriptions for the segment on screen
+// (observed/tracked past, or predicted future), colour-matched to the skeletons.
+// Rebuilt only when the scene, segment, or visible-method set changes.
+let _narrKey = null;
+const _esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function _narrRow(label, color, txt, future) {
+  const has = txt && txt.trim();
+  const body = has ? _esc(txt) : (future ? 'no future narration predicted' : 'no narration');
+  return `<div class="nrow"><div class="nlab"><span class="sw" style="background:${color}"></span>${_esc(label)}</div>` +
+         `<div class="ntxt${has ? '' : ' empty'}">${body}</div></div>`;
+}
+function updateNarration(seg) {
+  const future = (seg === 'future');
+  const keys = Object.keys(meta.methods).filter(k => enabled[k]);
+  const sig = `${meta.id}|${seg}|${keys.join(',')}`;
+  if (sig === _narrKey) return;              // no change — skip DOM work
+  _narrKey = sig;
+  const seglab = future ? 'Predicted future · narration'
+                        : (viewMode === 'track' ? 'Tracked past · narration' : 'Observed past · narration');
+  const rows = [ _narrRow(meta.gt.label, meta.gt.color,
+                          future ? meta.gt_text_future : meta.gt_text, future) ];
+  for (const k of keys) {
+    const mk = meta.methods[k];
+    rows.push(_narrRow(mk.label, mk.color, future ? mk.text_future : mk.text, future));
+  }
+  document.getElementById('narr').innerHTML = `<div class="seglab">${seglab}</div>` + rows.join('');
 }
 
 // ── loop ────────────────────────────────────────────────────────────────────

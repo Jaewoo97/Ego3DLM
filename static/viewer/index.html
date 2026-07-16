@@ -41,10 +41,18 @@
   .chip .ade { color:var(--sub); font-variant-numeric:tabular-nums; }
 
   /* info overlay */
-  #info { position:absolute; left:12px; top:12px; max-width:min(46%,440px);
-          background:rgba(255,255,255,.82); backdrop-filter:blur(3px);
-          border:1px solid var(--line); border-radius:10px; padding:11px 13px; font-size:13px; max-height:48%; overflow-y:auto; }
+  #info { position:absolute; left:12px; top:12px; max-width:min(50%,460px);
+          background:rgba(255,255,255,.85); backdrop-filter:blur(3px);
+          border:1px solid var(--line); border-radius:10px; padding:11px 13px; font-size:13px; max-height:74%; overflow-y:auto; }
   #info h3 { margin:0 0 4px 0; font-size:14px; }
+  /* narration panel — predicted/observed descriptions, colour-matched to the skeletons */
+  #narr { margin-top:8px; border-top:1px solid var(--line); padding-top:8px; display:flex; flex-direction:column; gap:8px; }
+  #narr .seglab { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--sub); font-weight:700; }
+  #narr .nrow { display:flex; flex-direction:column; gap:1px; }
+  #narr .nlab { font-size:11.5px; font-weight:700; display:flex; align-items:center; gap:5px; }
+  #narr .nlab .sw { width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.12); flex:0 0 auto; }
+  #narr .ntxt { font-size:12px; line-height:1.36; color:var(--ink); }
+  #narr .ntxt.empty { color:var(--sub); font-style:italic; }
   #ego { position:absolute; right:12px; top:12px; width:186px; background:rgba(255,255,255,.9);
          border:1px solid var(--line); border-radius:10px; padding:6px; text-align:center; }
   #ego.hidden { display:none; }
@@ -63,6 +71,7 @@
     <div id="loading">Loading scene…</div>
     <div id="info">
       <h3><span id="s-label">—</span><span id="phase">—</span></h3>
+      <div id="narr"></div>
     </div>
     <div id="ego" class="hidden">
       <div class="cap">Egocentric RGB <span>· input</span></div>
