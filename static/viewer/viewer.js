@@ -507,7 +507,9 @@ function setFrame(t) {
     if (gvis) poseSkeleton(gt, meta.gt.past[frame], bones);
   }
   gt.linePast.visible = !forecast && gtOn;   // track: observed-past path
-  gt.lineFut.visible = forecast && gtOn;     // forecast: GT past/future trajectory (toggled with GT)
+  gt.lineFut.visible = forecast && gtOn;     // forecast: GT trajectory (toggled with GT)
+  if (gt.lineFut.visible)                     // future portion of the GT path shows only once a future timeframe is reached
+    gt.lineFut.geometry.setDrawRange(0, frame < meta._futStart ? meta._futStart : meta._gtFwd.length);
   if (gt.pastGhost) gt.pastGhost.visible = forecast;   // historical past pose — left as-is (not toggled)
   if (TRAIL) {   // reveal each pose trace once its own timestep passes (past index, or future index)
     const rev = (TRACESEG === 'future') ? (frame - meta._futStart) : frame;
@@ -528,7 +530,7 @@ function setFrame(t) {
     }
     sk.group.visible = show;
     if (show) poseSkeleton(sk, joints, bones);
-    sk.lineFut.visible = on && forecast;
+    sk.lineFut.visible = on && forecast && frame >= futStart;   // prediction trajectory only during future timeframes
     sk.linePast.visible = on && !forecast;
   }
 
