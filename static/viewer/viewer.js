@@ -536,7 +536,7 @@ function setFrame(t) {
   const nPast = meta.n_past;
   const inPast = forecast ? (frame < nPast) : (frame < meta.gt.past.length);
   if (tpMesh) {
-    tpMesh.visible = inPast;
+    tpMesh.visible = inPast && gtOn;   // 3-point tracking input rides with the GT toggle
     if (inPast) {
       const jp = forecast ? meta._gtFwd[frame] : meta.gt.past[frame];
       for (let i = 0; i < TP_JOINTS.length; i++) {
@@ -549,7 +549,7 @@ function setFrame(t) {
   }
   if (tpTrails) {                          // grow the head/hand trails up to the current past frame
     const kk = Math.max(1, Math.min(meta.n_past, frame + 1));
-    for (const ln of tpTrails) { ln.visible = inPast; ln.geometry.setDrawRange(0, kk); }
+    for (const ln of tpTrails) { ln.visible = inPast && gtOn; ln.geometry.setDrawRange(0, kk); }   // trails ride with the GT toggle
   }
   if (DASH && gtDash) {                     // dashed body pose for the 3-point-tracking panel
     const gj = forecast ? meta._gtFwd[frame] : (inPast ? meta.gt.past[frame] : null);
