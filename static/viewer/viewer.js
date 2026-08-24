@@ -497,17 +497,18 @@ function setFrame(t) {
   const forecast = (viewMode === 'forecast');
 
   const gt = skels[GT_KEY];
+  const gtOn = enabled[GT_KEY] !== false;   // GT toggle (default on): skeleton + trajectory
   if (forecast) {                        // GT animates past -> bridge -> future
     poseSkeleton(gt, meta._gtFwd[frame], bones);
-    gt.group.visible = true;
+    gt.group.visible = gtOn;
   } else {                               // tracking: observed past only
     const gvis = frame < meta.gt.past.length;
-    gt.group.visible = gvis;
+    gt.group.visible = gtOn && gvis;
     if (gvis) poseSkeleton(gt, meta.gt.past[frame], bones);
   }
-  gt.linePast.visible = !forecast;       // track: observed-past path
-  gt.lineFut.visible = forecast;         // forecast: full continuous path
-  if (gt.pastGhost) gt.pastGhost.visible = forecast;   // persistent past-motion ghosts
+  gt.linePast.visible = !forecast && gtOn;   // track: observed-past path
+  gt.lineFut.visible = forecast && gtOn;     // forecast: GT past/future trajectory (toggled with GT)
+  if (gt.pastGhost) gt.pastGhost.visible = forecast;   // historical past pose — left as-is (not toggled)
   if (TRAIL) {   // reveal each pose trace once its own timestep passes (past index, or future index)
     const rev = (TRACESEG === 'future') ? (frame - meta._futStart) : frame;
     if (gt.statTrace) revealTrace(gt.statTrace, rev);
@@ -581,7 +582,7 @@ function setFrame(t) {
 function buildMethodChips() {
   const wrap = document.getElementById('methods');
   wrap.innerHTML = '';
-  // GT chip (always on, non-toggle look)
+  if (!(GT_KEY in enabled)) enabled[GT_KEY] = true;   // GT on by default, now toggleable
   wrap.appendChild(chip(GT_KEY, meta.gt.label, meta.gt.color, null, true));
   for (const key of Object.keys(meta.methods)) {
     if (!(key in enabled)) enabled[key] = (key === 'ours_withGRPO');
@@ -590,10 +591,10 @@ function buildMethodChips() {
 }
 function chip(key, label, color, ade, isGT) {
   const c = document.createElement('span');
-  c.className = 'chip' + (isGT ? '' : (enabled[key] ? '' : ' off'));
+  c.className = 'chip' + (enabled[key] ? '' : ' off');
   c.innerHTML = `<span class="sw" style="background:${color}"></span>${label}` +
                 (ade != null ? ` <span class="ade">${ade.toFixed(2)}</span>` : '');
-  if (!isGT) c.onclick = () => { enabled[key] = !enabled[key]; c.classList.toggle('off', !enabled[key]); setFrame(frame); };
+  c.onclick = () => { enabled[key] = !enabled[key]; c.classList.toggle('off', !enabled[key]); setFrame(frame); };
   return c;
 }
 
@@ -612,13 +613,14 @@ function _narrRow(label, color, txt, future) {
 function updateNarration(seg) {
   const future = (seg === 'future');
   const keys = Object.keys(meta.methods).filter(k => enabled[k]);
-  const sig = `${meta.id}|${seg}|${keys.join(',')}`;
+  const gtOn = enabled[GT_KEY] !== false;    // GT chip governs its narration row too
+  const sig = `${meta.id}|${seg}|${gtOn ? 'g' : '-'}|${keys.join(',')}`;
   if (sig === _narrKey) return;              // no change — skip DOM work
   _narrKey = sig;
   const seglab = future ? 'Predicted future · narration'
                         : (viewMode === 'track' ? 'Tracked past · narration' : 'Observed past · narration');
-  const rows = [ _narrRow(meta.gt.label, meta.gt.color,
-                          future ? meta.gt_text_future : meta.gt_text, future) ];
+  const rows = gtOn ? [ _narrRow(meta.gt.label, meta.gt.color,
+                          future ? meta.gt_text_future : meta.gt_text, future) ] : [];
   for (const k of keys) {
     const mk = meta.methods[k];
     rows.push(_narrRow(mk.label, mk.color, future ? mk.text_future : mk.text, future));
