@@ -329,6 +329,7 @@ async function loadSample(id) {
                                           vertexColors: true, sizeAttenuation: true });
   pcObj = new THREE.Points(pg, pmat);
   pcObj.frustumCulled = false;
+  pcObj.visible = document.getElementById('showpc').checked;   // respect the 3D-scene toggle
   scene.add(pcObj);
 
   // skeletons: GT + each method
@@ -653,6 +654,7 @@ document.getElementById('view').onchange = e => {
   setPlaying(false); setFrame(0);
 };
 document.getElementById('psize').oninput = e => { if (pcObj) pcObj.material.size = parseFloat(e.target.value); };
+document.getElementById('showpc').onchange = e => { if (pcObj) pcObj.visible = e.target.checked; };   // toggle the 3D point cloud
 document.getElementById('reset').onclick = () => frameCamera();
 document.getElementById('full').onclick = () => {
   if (document.fullscreenElement) document.exitFullscreen();
