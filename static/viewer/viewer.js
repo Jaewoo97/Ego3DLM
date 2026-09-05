@@ -44,6 +44,23 @@ const camera = new THREE.PerspectiveCamera(55, stage.clientWidth / stage.clientH
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+
+// Slow turntable: the camera gently orbits the person instead of a fixed view.
+// Live it advances with real time and pauses once the user grabs the view; the
+// capture recorder drives it deterministically per frame via window.__setOrbit().
+let autoOrbit = !(LAYER || CAM || FRAMESEG);   // only in the normal interactive viewer
+let orbitTheta = 0;                            // azimuth offset from the framing angle
+let _baseTheta = 0, _basePhi = Math.PI / 3, _baseRadius = 6;
+const ORBIT_SPEED = 0.13;                      // rad/s for the live auto-rotation
+const _orbOff = new THREE.Vector3();
+function applyOrbit() {
+  const st = _baseTheta + orbitTheta, sp = _basePhi, r = _baseRadius, sinp = Math.sin(sp);
+  _orbOff.set(r * sinp * Math.sin(st), r * Math.cos(sp), r * sinp * Math.cos(st));
+  camera.position.copy(controls.target).add(_orbOff);
+  camera.lookAt(controls.target);
+}
+controls.addEventListener('start', () => { autoOrbit = false; });   // user takes over → stop turntable
+window.__setOrbit = (theta) => { autoOrbit = false; orbitTheta = theta; applyOrbit(); };
 controls.screenSpacePanning = true;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x5a5f66, 1.0));
@@ -447,6 +464,12 @@ function frameCamera() {
   controls.target.copy(c);
   camera.position.copy(c).add(new THREE.Vector3(0.75, 0.55, 1).normalize().multiplyScalar(dist));
   camera.updateProjectionMatrix();
+  // record the framing angle as the turntable's base, then reset the orbit
+  _orbOff.copy(camera.position).sub(controls.target);
+  _baseRadius = _orbOff.length();
+  _basePhi = Math.acos(Math.min(1, Math.max(-1, _orbOff.y / _baseRadius)));
+  _baseTheta = Math.atan2(_orbOff.x, _orbOff.z);
+  orbitTheta = 0;
   controls.update();
 }
 
@@ -657,7 +680,10 @@ function animate() {
     acc += dt * meta.fps * speed;
     if (acc >= 1) { const step = Math.floor(acc); acc -= step; setFrame((frame + step) % total); }
   }
-  if (!headCam) controls.update();        // head-follow camera sets the view itself
+  if (!headCam) {
+    if (autoOrbit && meta) { orbitTheta += dt * ORBIT_SPEED; applyOrbit(); }   // gentle turntable
+    controls.update();
+  }
   renderer.render(scene, camera);
 }
 
