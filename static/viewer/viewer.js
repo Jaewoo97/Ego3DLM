@@ -33,7 +33,12 @@ renderer.setSize(stage.clientWidth, stage.clientHeight);
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf2f3f5);
+// Past frames keep a near-white background; predicted-future frames get a subtle
+// cool tint so past vs future reads at a glance (kept faint so the point cloud
+// and poses stay clearly visible). Applied per-frame in setFrame().
+const BG_PAST = new THREE.Color(0xf2f3f5);
+const BG_FUTURE = new THREE.Color(0xe3ecfb);
+scene.background = BG_PAST.clone();
 
 const camera = new THREE.PerspectiveCamera(55, stage.clientWidth / stage.clientHeight, 0.05, 500);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -495,6 +500,12 @@ function setFrame(t) {
   frame = Math.max(0, Math.min(total - 1, Math.round(t)));
   const bones = meta.bones;
   const forecast = (viewMode === 'forecast');
+
+  // background tint marks predicted-future frames: past stays white, the tint ramps
+  // in over the first few future frames so the change is a smooth cue, not a flash.
+  const BG_RAMP = 4;
+  const futAmt = forecast ? Math.max(0, Math.min(1, (frame - meta._futStart) / BG_RAMP)) : 0;
+  scene.background.copy(BG_PAST).lerp(BG_FUTURE, futAmt);
 
   const gt = skels[GT_KEY];
   const gtOn = enabled[GT_KEY] !== false;   // GT toggle (default on): skeleton + trajectory
