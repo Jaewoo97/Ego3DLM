@@ -506,6 +506,14 @@ function setFrame(t) {
   const BG_RAMP = 4;
   const futAmt = forecast ? Math.max(0, Math.min(1, (frame - meta._futStart) / BG_RAMP)) : 0;
   scene.background.copy(BG_PAST).lerp(BG_FUTURE, futAmt);
+  // background-colour key: only meaningful in forecasting (past→future); highlight the current phase
+  const _leg = document.getElementById('bglegend');
+  if (_leg) {
+    _leg.style.display = forecast ? 'flex' : 'none';
+    const _inFut = forecast && frame >= meta._futStart;
+    _leg.querySelector('.bl-past').classList.toggle('on', !_inFut);
+    _leg.querySelector('.bl-future').classList.toggle('on', _inFut);
+  }
 
   const gt = skels[GT_KEY];
   const gtOn = enabled[GT_KEY] !== false;   // GT toggle (default on): skeleton + trajectory
