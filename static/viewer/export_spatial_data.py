@@ -37,6 +37,15 @@ SAMPLES = [
     ('turning',   'Walking and turning',          '20230823_s0_evelyn_moody_act0_zkzw4v/0026.pt'),     # 021686  1.7 m
     ('navigate',  'Navigating a room',            '20230823_s1_alison_riddle_act1_ayav9z/0117.pt'),    # 022500  1.8 m
     ('furniture', 'Walking past furniture',       '20230803_s1_jennifer_sexton_act3_y5o5bu/0157.pt'),  # 014423  1.6 m
+    # Additional scenes, each from a recording not represented above (new rooms/houses),
+    # picked by a full scan of all 2457 labelled clips: long walked path, a
+    # best-direction that keeps changing, and mixed LOW/MID clearance.
+    ('bedhall',   'Bedroom into a hallway',       '20230809_s1_laura_smith_act1_iarj4m/0056.pt'),      # 016199  path 3.0 m, 13 sweeps
+    ('doorway',   'Crossing to a doorway',        '20230822_s0_kyle_parker_act2_y3l7lv/0175.pt'),      # 021235  path 3.1 m, 13 sweeps
+    ('kitchen',   'Living area to kitchen',       '20230815_s0_samantha_lester_act0_513kae/0066.pt'),  # 017199  path 2.9 m
+    ('exitbed',   'Exiting a bedroom',            '20230821_s1_william_wilson_act3_gnf0bz/0168.pt'),   # 020842  path 2.4 m, 14 sweeps
+    ('enterbed',  'Entering a bedroom',           '20230803_s0_robert_howard_act4_e29s94/0084.pt'),    # 013788  path 2.4 m, 13 sweeps
+    ('hallway',   'Walking into a hallway',       '20230823_s1_alison_riddle_act3_ij6e0r/0001.pt'),    # 022776  path 2.4 m, 11 sweeps
 ]
 
 R_UP  = np.array([[1,0,0],[0,0,1],[0,-1,0]], float)   # world +Z up -> viewer +Y up

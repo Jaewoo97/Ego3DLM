@@ -227,10 +227,17 @@ document.getElementById('speed').onchange = e => { speed = parseFloat(e.target.v
 document.getElementById('sample').onchange = e => { setPlaying(false); loadSample(e.target.value); };
 document.getElementById('reset').onclick = () => frameCamera();
 document.getElementById('full').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.getElementById('app').requestFullscreen?.(); };
-addEventListener('resize', () => {
-  camera.aspect = stage.clientWidth / stage.clientHeight; camera.updateProjectionMatrix();
-  renderer.setSize(stage.clientWidth, stage.clientHeight);
-});
+// Keep the canvas matched to the stage box: renderer.setSize() writes inline pixel
+// sizes, so a stage that shrinks without a window resize (the control bar wrapping
+// to another row) would leave an oversized canvas covering the bar's controls.
+function syncSize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+addEventListener('resize', syncSize);
+if (window.ResizeObserver) new ResizeObserver(syncSize).observe(stage);
 
 (async function () {
   const idx = await (await fetch(DATA + 'index.json')).json();

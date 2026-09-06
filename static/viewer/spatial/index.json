@@ -29,6 +29,36 @@
    "id": "furniture",
    "label": "Walking past furniture",
    "file": "furniture.json"
+  },
+  {
+   "id": "bedhall",
+   "label": "Bedroom into a hallway",
+   "file": "bedhall.json"
+  },
+  {
+   "id": "doorway",
+   "label": "Crossing to a doorway",
+   "file": "doorway.json"
+  },
+  {
+   "id": "kitchen",
+   "label": "Living area to kitchen",
+   "file": "kitchen.json"
+  },
+  {
+   "id": "exitbed",
+   "label": "Exiting a bedroom",
+   "file": "exitbed.json"
+  },
+  {
+   "id": "enterbed",
+   "label": "Entering a bedroom",
+   "file": "enterbed.json"
+  },
+  {
+   "id": "hallway",
+   "label": "Walking into a hallway",
+   "file": "hallway.json"
   }
  ]
 }
