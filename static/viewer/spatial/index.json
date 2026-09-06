@@ -16,11 +16,6 @@
    "file": "across.json"
   },
   {
-   "id": "kitchen",
-   "label": "Living area to kitchen",
-   "file": "kitchen.json"
-  },
-  {
    "id": "corridor",
    "label": "Walking down a corridor",
    "file": "corridor.json"
