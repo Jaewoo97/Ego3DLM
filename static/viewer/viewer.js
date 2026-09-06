@@ -709,11 +709,19 @@ document.getElementById('full').onclick = () => {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.getElementById('app').requestFullscreen?.();
 };
-addEventListener('resize', () => {
-  camera.aspect = stage.clientWidth / stage.clientHeight;
+// Keep the canvas matched to the stage box. renderer.setSize() writes inline pixel
+// sizes, so a stage that changes without a window resize (the control bar wrapping
+// to an extra row once the method chips are built) would leave an oversized canvas
+// overflowing on top of the bar and hiding the Scene/View controls.
+function syncSize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  renderer.setSize(stage.clientWidth, stage.clientHeight);
-});
+  renderer.setSize(w, h);
+}
+addEventListener('resize', syncSize);
+if (window.ResizeObserver) new ResizeObserver(syncSize).observe(stage);
 
 // ── go ──────────────────────────────────────────────────────────────────────
 (async function () {
