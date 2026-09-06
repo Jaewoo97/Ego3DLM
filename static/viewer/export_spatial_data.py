@@ -42,10 +42,11 @@ SKELETON_PAIRS = [
 # recomputed level matches the official one), subject to actually showing some
 # variety -- a clip where every direction is LOW for all 49 frames demonstrates
 # nothing. The numbers below are printed by this script.
+# Order matters: the viewer opens on samples[0].
 SAMPLES = [
+    ('across',    'Walking across a room',        '20230817_s0_brittney_powell_act3_1t2she/0048.pt'),  # 019083  68% agree, 22/117/8 -- only clip with HIGH/green
     ('furniture', 'Walking past furniture',       '20230803_s1_jennifer_sexton_act3_y5o5bu/0157.pt'),  # 014423  91% agree, 42/105/0
     ('bedhall',   'Bedroom into a hallway',       '20230809_s1_laura_smith_act1_iarj4m/0056.pt'),      # 016199  86% agree, 136/11/0
-    ('across',    'Walking across a room',        '20230817_s0_brittney_powell_act3_1t2she/0048.pt'),  # 019083  68% agree, 22/117/8 -- only clip with HIGH/green
     ('corridor',  'Walking down a corridor',      '20230829_s1_angel_roberts_act2_zv48bm/0044.pt'),    # 024767  57% agree, 110/37/0, 7.2 m walk
 ]
 # Dropped -- removed on request, all-LOW for the whole clip (nothing to illustrate),

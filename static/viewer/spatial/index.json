@@ -1,6 +1,11 @@
 {
  "samples": [
   {
+   "id": "across",
+   "label": "Walking across a room",
+   "file": "across.json"
+  },
+  {
    "id": "furniture",
    "label": "Walking past furniture",
    "file": "furniture.json"
@@ -9,11 +14,6 @@
    "id": "bedhall",
    "label": "Bedroom into a hallway",
    "file": "bedhall.json"
-  },
-  {
-   "id": "across",
-   "label": "Walking across a room",
-   "file": "across.json"
   },
   {
    "id": "corridor",
