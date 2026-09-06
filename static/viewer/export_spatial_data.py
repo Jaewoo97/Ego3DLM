@@ -19,6 +19,9 @@ Outputs into ./spatial:  index.json, <id>.json, <id>.pc.bin (float32 Y-up).
 import os, re, json
 import numpy as np
 import torch
+from scipy.spatial import cKDTree
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import connected_components
 
 HERE       = os.path.dirname(os.path.abspath(__file__))
 DATA_ROOT  = os.path.abspath(os.path.join(HERE, '..', 'ECCV2026', 'qual', 'data'))
@@ -122,6 +125,36 @@ def cat_free(d):
     return 0 if d < LOW_TH else (1 if d < HIGH_TH else 2)
 
 
+# Reconstruction noise leaves thousands of tiny floating specks (e.g. the corridor
+# clip has ~3.2k connected components smaller than 5 points). Since clearance is
+# the distance to the NEAREST point, a single 4-5 point speck was enough to make a
+# whole direction read LOW/red. Link points within CLUSTER_R and drop any connected
+# component smaller than MIN_CLUSTER, so both the measurement and what is drawn use
+# real surfaces.
+# The radius is deliberately generous: a speck lying against real geometry is
+# absorbed into it (and is harmless anyway, since the surface sets the same
+# distance), while a speck floating alone in an otherwise empty cone -- the case
+# that produced a spurious red/orange -- stays its own small component and is
+# dropped. A tighter radius (0.12) instead chewed into genuinely sparse scenes:
+# agreement with the published labels fell from 74% to 64%, whereas this setting
+# keeps 95-99% of the points and 69%.
+CLUSTER_R, MIN_CLUSTER = 0.30, 20
+
+
+def drop_speckles(pcv):
+    if len(pcv) < MIN_CLUSTER:
+        return pcv, 0
+    tree = cKDTree(pcv)
+    pairs = tree.query_pairs(CLUSTER_R, output_type='ndarray')
+    n = len(pcv)
+    if len(pairs) == 0:
+        return pcv[:0], n
+    g = coo_matrix((np.ones(len(pairs)), (pairs[:, 0], pairs[:, 1])), shape=(n, n))
+    _, lab = connected_components(g, directed=False)
+    keep = np.bincount(lab)[lab] >= MIN_CLUSTER
+    return pcv[keep], int((~keep).sum())
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     index = []
@@ -157,6 +190,8 @@ def main():
         # Filter BEFORE measuring clearance so the numbers describe what is on screen.
         head_top = float(gpv[:, HEAD_I, 1].max()) + 0.25
         pcv = pcv[(pcv[:, 1] >= floor_y - 0.15) & (pcv[:, 1] <= head_top)]
+        n_before = len(pcv)
+        pcv, n_dropped = drop_speckles(pcv)   # isolated specks must not set the clearance
 
         frames = []
         agree = 0
@@ -184,7 +219,8 @@ def main():
         lv = [sum(1 for f in frames for c in f['cat'] if c == l) for l in (0, 1, 2)]
         index.append(dict(id=sid, label=label, file=f'{sid}.json'))
         print(f'[{sid}] {label}: {T} frames, disp={np.linalg.norm(gpv[T-1,0]-gpv[0,0]):.1f}m, '
-              f'LOW/MID/HIGH={lv[0]}/{lv[1]}/{lv[2]}, agree-with-official={agree/(3*T)*100:.0f}%, best-dir {bd}')
+              f'LOW/MID/HIGH={lv[0]}/{lv[1]}/{lv[2]}, agree-with-official={agree/(3*T)*100:.0f}%, '
+              f'speckles-dropped={n_dropped}/{n_before}, best-dir {bd}')
 
     json.dump(dict(samples=index), open(os.path.join(OUT, 'index.json'), 'w'), indent=1)
     print('wrote', OUT)
