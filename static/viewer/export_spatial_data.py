@@ -30,23 +30,29 @@ SKELETON_PAIRS = [
 # Mostly WALKING scenes (global motion, disp > 1.6 m) with clearance variety, so
 # you watch the clearance/obstacles change as the person navigates. Diverse
 # recordings; brittney/0048 also has an open (HIGH) direction.
+# The LOW/MID/HIGH colour comes from the official labels (clean voxelised scene)
+# while the highlighted points are the nearest cluster in the displayed, noisy 50k
+# cloud, so the two can disagree — giving highlights that are "far but red" or
+# "close but orange". Scenes are therefore screened for VISUAL CONSISTENCY: per
+# frame and direction, measure the nearest highlighted distance the way spatial.js
+# does and count violations (LOW but >1.2 m, MID but <0.5 m, HIGH but <1.0 m), and
+# require the median LOW distance to be genuinely closer than the median MID.
+# Kept: violations <=7.5% AND a positive LOW->MID margin.
 SAMPLES = [
-    ('corridor',  'Walking down a corridor',     '20230829_s1_angel_roberts_act2_zv48bm/0044.pt'),   # 024767  7.2 m
-    ('across',    'Walking across a room',        '20230817_s0_brittney_powell_act3_1t2she/0048.pt'),  # 019083  4.6 m, LOW/MID/HIGH
-    ('shift',     'Walking, clearance shifts',    '20230816_s1_jeffery_bryant_act3_ln6bpy/0043.pt'),   # 018702  2.7 m
-    ('turning',   'Walking and turning',          '20230823_s0_evelyn_moody_act0_zkzw4v/0026.pt'),     # 021686  1.7 m
-    ('navigate',  'Navigating a room',            '20230823_s1_alison_riddle_act1_ayav9z/0117.pt'),    # 022500  1.8 m
-    ('furniture', 'Walking past furniture',       '20230803_s1_jennifer_sexton_act3_y5o5bu/0157.pt'),  # 014423  1.6 m
-    # Additional scenes, each from a recording not represented above (new rooms/houses),
-    # picked by a full scan of all 2457 labelled clips: long walked path, a
-    # best-direction that keeps changing, and mixed LOW/MID clearance.
-    ('bedhall',   'Bedroom into a hallway',       '20230809_s1_laura_smith_act1_iarj4m/0056.pt'),      # 016199  path 3.0 m, 13 sweeps
-    ('doorway',   'Crossing to a doorway',        '20230822_s0_kyle_parker_act2_y3l7lv/0175.pt'),      # 021235  path 3.1 m, 13 sweeps
-    ('kitchen',   'Living area to kitchen',       '20230815_s0_samantha_lester_act0_513kae/0066.pt'),  # 017199  path 2.9 m
-    ('exitbed',   'Exiting a bedroom',            '20230821_s1_william_wilson_act3_gnf0bz/0168.pt'),   # 020842  path 2.4 m, 14 sweeps
-    ('enterbed',  'Entering a bedroom',           '20230803_s0_robert_howard_act4_e29s94/0084.pt'),    # 013788  path 2.4 m, 13 sweeps
-    ('hallway',   'Walking into a hallway',       '20230823_s1_alison_riddle_act3_ij6e0r/0001.pt'),    # 022776  path 2.4 m, 11 sweeps
+    ('furniture', 'Walking past furniture',       '20230803_s1_jennifer_sexton_act3_y5o5bu/0157.pt'),  # 014423  0.7% viol, margin +0.42
+    ('enterbed',  'Entering a bedroom',           '20230803_s0_robert_howard_act4_e29s94/0084.pt'),    # 013788  2.0% viol, margin +0.08
+    ('exitbed',   'Exiting a bedroom',            '20230821_s1_william_wilson_act3_gnf0bz/0168.pt'),   # 020842  3.4% viol, margin +0.01
+    ('bedhall',   'Bedroom into a hallway',       '20230809_s1_laura_smith_act1_iarj4m/0056.pt'),      # 016199  6.1% viol, margin +0.05
+    ('corridor',  'Walking down a corridor',      '20230829_s1_angel_roberts_act2_zv48bm/0044.pt'),    # 024767  7.5% viol, margin +0.19
 ]
+# Dropped for inconsistent colouring (violation % | LOW->MID margin):
+#   navigate  alison_riddle_act1/0117   33.3% | -0.06   shift    jeffery_bryant_act3/0043  22.4% | +0.26
+#   kitchen   samantha_lester_act0/0066 21.1% | -0.21   across   brittney_powell_act3/0048 15.0% | +1.29
+#   turning   evelyn_moody_act0/0026     8.8% | -0.11   doorway  kyle_parker_act2/0175      5.4% | -0.03
+#   hallway   alison_riddle_act3/0001    3.4% | -0.03
+# NB: `across` was the only clip with a HIGH/green direction (only 3 clips in the
+# whole dataset have one, all in brittney_powell), but 14% of its highlights were
+# close-yet-orange/green, so the remaining set is LOW/MID only.
 
 R_UP  = np.array([[1,0,0],[0,0,1],[0,-1,0]], float)   # world +Z up -> viewer +Y up
 HEAD_I = 6
