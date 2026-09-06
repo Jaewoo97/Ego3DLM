@@ -154,17 +154,20 @@ function setFrame(t) {
   const dirs = [[fx, fz], [-rx, -rz], [rx, rz]];     // F, L, R cones oriented by facing
   for (let k = 0; k < 3; k++) {
     const isBest = f.best === k;
+    // wedge reaches the measured free distance, so its tip lands on the obstacle
+    // that is highlighted (an empty direction reaches the full 5 m and reads HIGH)
+    const reach = f.free ? Math.max(0.35, f.free[k]) : CAT_LEN[f.cat[k]];
     updateWedge(wedges[k], g[0], gy, g[2], dirs[k][0], dirs[k][1],
-                CAT_LEN[f.cat[k]], CAT_COL[f.cat[k]], isBest ? 0.62 : 0.3);
+                reach, CAT_COL[f.cat[k]], isBest ? 0.62 : 0.3);
     const row = document.querySelector(`.row[data-dir="${k}"]`);
     row.querySelector('.dot').style.background = '#' + CAT_COL[f.cat[k]].toString(16).padStart(6, '0');
     row.querySelector('.lvl').textContent = CAT_TXT[f.cat[k]];
-    row.querySelector('.m').textContent = '';
+    row.querySelector('.m').textContent = f.free ? f.free[k].toFixed(1) + ' m' : '';
     row.classList.toggle('best', isBest);
   }
-  // best direction (Front / Left / Right / Back) from the official label
+  // best direction (Front / Left / Right / Back)
   const bdir = [[fx, fz], [-rx, -rz], [rx, rz], [-fx, -fz]][f.best];
-  const br = f.best === 3 ? 0.9 : CAT_LEN[f.cat[f.best]];
+  const br = f.best === 3 ? 0.9 : (f.free ? Math.max(0.35, f.free[f.best]) : CAT_LEN[f.cat[f.best]]);
   arrow.position.set(g[0] + bdir[0] * br, gy + 0.15, g[2] + bdir[1] * br);
   arrow.quaternion.setFromUnitVectors(UP, new THREE.Vector3(bdir[0], 0, bdir[1]).normalize());
   document.getElementById('best').innerHTML = 'Best direction: <b>' + DIR_TXT[f.best] + '</b>';
@@ -183,24 +186,35 @@ function updateHighlights(fr) {
   const fx = f.fwd[0], fz = f.fwd[1], rx = -fz, rz = fx;
   const dirs = [[fx, fz], [-rx, -rz], [rx, rz]];
   const cosHalf = Math.cos(HALF), n = pcPos.length / 3;
+  // Same measurement the exporter used for the colours (3D distance from the head,
+  // ±1 m height band, ±60° cone), so a highlighted cluster always sits exactly where
+  // the wedge ends. A direction with nothing inside 5 m gets no highlight and is HIGH.
   const dmin = [Infinity, Infinity, Infinity];
-  for (let i = 0; i < n; i++) {                          // pass 1: nearest obstacle per direction
-    const py = pcPos[i * 3 + 1]; if (Math.abs(py - hy) > 1.0) continue;
-    const ex = pcPos[i * 3] - hx, ez = pcPos[i * 3 + 2] - hz, d = Math.hypot(ex, ez);
-    if (d < 0.3 || d > 5.0) continue;
-    const nx = ex / d, nz = ez / d;
-    for (let k = 0; k < 3; k++) if (nx * dirs[k][0] + nz * dirs[k][1] >= cosHalf && d < dmin[k]) dmin[k] = d;
+  if (meta.frames[fr].free) {
+    for (let k = 0; k < 3; k++) {
+      const fd = meta.frames[fr].free[k];
+      dmin[k] = (fd >= 5.0) ? Infinity : fd;
+    }
+  } else {
+    for (let i = 0; i < n; i++) {                        // fallback: measure here
+      const py = pcPos[i * 3 + 1]; if (Math.abs(py - hy) > 1.0) continue;
+      const ex = pcPos[i * 3] - hx, ey = py - hy, ez = pcPos[i * 3 + 2] - hz;
+      const d = Math.sqrt(ex * ex + ey * ey + ez * ez); if (d <= 0.05 || d >= 5.0) continue;
+      const hl = Math.hypot(ex, ez) || 1e-8, nx = ex / hl, nz = ez / hl;
+      for (let k = 0; k < 3; k++) if (nx * dirs[k][0] + nz * dirs[k][1] > cosHalf && d < dmin[k]) dmin[k] = d;
+    }
   }
   const posA = hlObj.geometry.attributes.position.array, colA = hlObj.geometry.attributes.color.array;
   const HL_MAX = posA.length / 3; let w = 0;
-  for (let i = 0; i < n && w < HL_MAX; i++) {             // pass 2: highlight the near-obstacle cluster
+  for (let i = 0; i < n && w < HL_MAX; i++) {             // highlight the near-obstacle cluster
     const py = pcPos[i * 3 + 1]; if (Math.abs(py - hy) > 1.0) continue;
-    const ex = pcPos[i * 3] - hx, ez = pcPos[i * 3 + 2] - hz, d = Math.hypot(ex, ez);
-    if (d < 0.3 || d > 5.0) continue;
-    const nx = ex / d, nz = ez / d;
+    const ex = pcPos[i * 3] - hx, ey = py - hy, ez = pcPos[i * 3 + 2] - hz;
+    const d = Math.sqrt(ex * ex + ey * ey + ez * ez);
+    if (d <= 0.05 || d >= 5.0) continue;
+    const hl = Math.hypot(ex, ez) || 1e-8, nx = ex / hl, nz = ez / hl;
     for (let k = 0; k < 3; k++) {
       if (dmin[k] === Infinity) continue;
-      if (nx * dirs[k][0] + nz * dirs[k][1] >= cosHalf && d <= dmin[k] + 0.6) {
+      if (nx * dirs[k][0] + nz * dirs[k][1] > cosHalf && d <= dmin[k] + 0.6) {
         const c = CAT_COL3[f.cat[k]];
         posA[w * 3] = pcPos[i * 3]; posA[w * 3 + 1] = pcPos[i * 3 + 1]; posA[w * 3 + 2] = pcPos[i * 3 + 2];
         colA[w * 3] = c.r; colA[w * 3 + 1] = c.g; colA[w * 3 + 2] = c.b; w++;

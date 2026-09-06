@@ -6,19 +6,19 @@
    "file": "furniture.json"
   },
   {
-   "id": "enterbed",
-   "label": "Entering a bedroom",
-   "file": "enterbed.json"
-  },
-  {
-   "id": "exitbed",
-   "label": "Exiting a bedroom",
-   "file": "exitbed.json"
-  },
-  {
    "id": "bedhall",
    "label": "Bedroom into a hallway",
    "file": "bedhall.json"
+  },
+  {
+   "id": "across",
+   "label": "Walking across a room",
+   "file": "across.json"
+  },
+  {
+   "id": "kitchen",
+   "label": "Living area to kitchen",
+   "file": "kitchen.json"
   },
   {
    "id": "corridor",

@@ -25,8 +25,11 @@ IMG_SIZE = 448
 IMG_Q    = 82
 # short looping clip around each QA frame, so the QA is shown against live ego
 # video rather than a single still
-VID_HALF = 15                  # frames each side of the QA frame (~3 s at 10 fps)
-VID_FPS  = 10
+# The vqa frames are sampled ~1 s apart (measured: their consecutive-frame motion
+# exceeds even a 3 s gap in true 10 fps footage), so playing them at 10 fps ran
+# ~10x too fast. Play them slowly instead.
+VID_HALF = 7                   # frames each side of the QA frame (15 frames, ~5 s)
+VID_FPS  = 3
 VID_SIZE = 448
 VID_CRF  = 27
 
