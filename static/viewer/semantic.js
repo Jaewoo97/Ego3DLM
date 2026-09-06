@@ -26,6 +26,24 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
+// Load + play each ego clip only while its card is on screen (72 clips exist;
+// fetching them all at once would be pointless traffic).
+const _vObs = window.IntersectionObserver ? new IntersectionObserver(entries => {
+  for (const e of entries) {
+    const v = e.target;
+    if (e.isIntersecting) {
+      if (!v.src && v.dataset.src) v.src = v.dataset.src;
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
+  }
+}, { rootMargin: '200px' }) : null;
+function watchVideo(v) {
+  if (_vObs) _vObs.observe(v);
+  else { v.src = v.dataset.src; v.autoplay = true; v.play().catch(() => {}); }
+}
+
 function render() {
   const scene = db.scenes.find(s => s.id === $scene.value);
   $grid.innerHTML = '';
@@ -36,11 +54,24 @@ function render() {
     nCards++; nQA += qa.length;
     const card = document.createElement('div');
     card.className = 'card';
-    const img = document.createElement('img');
-    img.loading = 'lazy';
-    img.src = DATA + 'img/' + f.img;
-    img.alt = 'egocentric frame';
-    card.appendChild(img);
+    // show the QA against live egocentric video; fall back to the still frame.
+    // The clip is only fetched once the card scrolls near the viewport, and it
+    // plays only while visible, so opening a scene doesn't pull every clip.
+    if (f.vid) {
+      const v = document.createElement('video');
+      v.dataset.src = DATA + 'vid/' + f.vid;
+      v.poster = DATA + 'img/' + f.img;
+      v.muted = true; v.loop = true; v.preload = 'none';
+      v.playsInline = true; v.setAttribute('playsinline', '');
+      card.appendChild(v);
+      watchVideo(v);
+    } else {
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.src = DATA + 'img/' + f.img;
+      img.alt = 'egocentric frame';
+      card.appendChild(img);
+    }
     for (const q of qa) {
       const el = document.createElement('div');
       el.className = 'qa';
